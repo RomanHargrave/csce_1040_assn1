@@ -27,7 +27,7 @@ float Student_averageGrade(Student* student) {
     size nCourses = Student_coursesCount(student);
     float gradeAccum = 0;
     for(size courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
-        gradeAccum += GradeArray_average(student->grades[courseIdx], student->gradeCount[courseIdx]);
+        gradeAccum += GradeArray_average(student->courses[courseIdx].grades, student->courses[courseIdx].gradeCount);
     }
     return nCourses > 0 ? gradeAccum / nCourses : 0;
 }
@@ -43,7 +43,7 @@ float Course_averageGrade(Course* course) {
             continue;
         }
 
-        gradeAccum += GradeArray_average(student->grades[indexInStudent], student->gradeCount[indexInStudent]);
+        gradeAccum += GradeArray_average(student->courses[indexInStudent].grades, student->courses[indexInStudent].gradeCount);
     }
 
     return nStudents > 0 ? gradeAccum / nStudents : 0;

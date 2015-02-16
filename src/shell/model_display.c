@@ -61,8 +61,8 @@ void Course_studentsTable(Course* course, char* table[][Course_STUDENT_COLUMNS_C
         if(selfIdx < 0) continue;
         sprintf(table[idx][0], "%03u", student->studentId);
         strcpy(table[idx][1], student->studentName);
-        sprintf(table[idx][2], "%3.02f", GradeArray_average(student->grades[selfIdx], student->gradeCount[selfIdx]));
-        char* gradeStr = Array_toString(student->grades[selfIdx], student->gradeCount[selfIdx], sizeof(grade), ", ", &gradeStringifier);
+        sprintf(table[idx][2], "%3.02f", GradeArray_average(student->courses[selfIdx].grades, student->courses[selfIdx].gradeCount));
+        char* gradeStr = Array_toString(student->courses[selfIdx].grades, student->courses[selfIdx].gradeCount, sizeof(grade), ", ", &gradeStringifier);
         strcpy(table[idx][3], gradeStr);
         free(gradeStr);
     }
@@ -74,11 +74,11 @@ void Student_coursesTable(Student* student, char* table[][Student_COURSE_COLUMNS
     size nCourses = Student_coursesCount(student);
 
     for(size idx = 0; idx < nCourses; ++idx) {
-        Course* course = student->courses[idx];
+        Course* course = student->courses[idx].course;
         sprintf(table[idx][0], "%02u", course->courseId);
         strcpy(table[idx][1], course->courseName);
-        sprintf(table[idx][2], "%3.02f", GradeArray_average(student->grades[idx], student->gradeCount[idx]));
-        char* gradeStr = Array_toString(student->grades[idx], student->gradeCount[idx], sizeof(grade), ", ", &gradeStringifier);
+        sprintf(table[idx][2], "%3.02f", GradeArray_average(student->courses[idx].grades, student->courses[idx].gradeCount));
+        char* gradeStr = Array_toString(student->courses[idx].grades, student->courses[idx].gradeCount, sizeof(grade), ", ", &gradeStringifier);
         strcpy(table[idx][3], (gradeStr ?  gradeStr : "None"));
         free(gradeStr);
     }

@@ -137,13 +137,13 @@ typedef struct S_Student {
      *
      * Effectively, this is 40 bytes long
      */
-    grade grades[4][10];
+//    grade grades[4][10];
 
     /*
      * Indicates the number of grades a student has in a course
      * Where the index of the course in the Course* array relates to the index in this array.
      */
-    byte gradeCount[4];
+//    byte gradeCount[4];
 
     /**
     * 2-byte integer describes student ID.

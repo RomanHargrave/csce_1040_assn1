@@ -472,11 +472,11 @@ IStudent IStudent_fromStudent(Student* student) {
     };
 
     strncpy(iStudent.studentName, student->studentName, strlen(student->studentName));
-    memcpy(iStudent.gradeCount, student->gradeCount, sizeof(student->gradeCount));
 
     for(byte idx = 0; idx < iStudent.coursesCount; ++idx) {
-        iStudent.courses[idx] = student->courses[idx]->courseId;
-        memcpy(iStudent.grades[idx], student->grades[idx], sizeof(student->grades[idx]));
+        iStudent.courses[idx]       = student->courses[idx].course->courseId;
+        iStudent.gradeCount[idx]    = (byte) student->courses[idx].gradeCount;
+        memcpy(iStudent.grades[idx], student->courses[idx].grades, sizeof(student->courses[idx].grades));
     }
 
     return iStudent;
@@ -496,11 +496,10 @@ Student IStudent_toStudent(IStudent* iStudent) {
     // Copy student name
     strncpy(student.studentName, iStudent->studentName, strlen(iStudent->studentName));
 
-    memcpy(student.gradeCount, iStudent->gradeCount, sizeof(iStudent->gradeCount));
-
     // For each course, copy grades from the primitive model, to the non-primitive model
     for(byte idx = 0; idx < nCourses; ++idx) {
-        memcpy(student.grades[idx], iStudent->grades[idx], sizeof(student.grades[idx]));
+        student.courses[idx].gradeCount = iStudent->gradeCount[idx];
+        memcpy(student.courses[idx].grades, iStudent->grades[idx], sizeof(iStudent->grades[idx]));
     }
 
     return student;
@@ -637,9 +636,9 @@ SerializationStatus GradeBook_serialize(GradeBook* gradeBook, byte* buffer) {
         size nStudentCourses = Student_coursesCount(&gradeBook->students[studentIdx]);
 
         for(byte courseIdx = 0; courseIdx < nStudentCourses; ++courseIdx) {
-            if(!Array_Contains(gradeBook->courses, gradeBook->students[studentIdx].courses[courseIdx], nCourses, sizeof(Course), &Course_compareById)) {
+            if(!Array_Contains(gradeBook->courses, gradeBook->students[studentIdx].courses[courseIdx].course, nCourses, sizeof(Course), &Course_compareById)) {
                 printf("%s contains an illegal reference to %s, which does not reside in the open GradeBook\n",
-                        Student_toString(&gradeBook->students[studentIdx]), Course_toString(gradeBook->students[studentIdx].courses[courseIdx]));
+                        Student_toString(&gradeBook->students[studentIdx]), Course_toString(gradeBook->students[studentIdx].courses[courseIdx].course));
                 return ILLEGAL_COURSE_ID;
             }
         }
@@ -841,12 +840,13 @@ SerializationStatus GradeBook_deserialize(byte* serialData, GradeBook* destinati
             /*
              * Search and add student
              */
-            destination->students[studentIdx].courses[courseIdx] = bsearch(&key, destination->courses, nCourses, sizeof(Course), &Course_compareById);
+            destination->students[studentIdx].courses[courseIdx].course =
+                    bsearch(&key, destination->courses, nCourses, sizeof(Course), &Course_compareById);
 
             /*
              * Check that the course reference is valid
              */
-            if(!destination->students[studentIdx].courses[courseIdx]) {
+            if(!destination->students[studentIdx].courses[courseIdx].course) {
                 printf("Student %s references an illegal course ID: %u at index %u \n",
                         Student_toString(&destination->students[studentIdx]), iStudents[studentIdx].courses[courseIdx], courseIdx);
 
@@ -869,7 +869,7 @@ size sizeOfStudent(Student* student) {
     size nGrades       = 0;
 
     for(size idx = 0; idx < nCourses; ++idx){
-        nGrades += student->gradeCount[idx];
+        nGrades += student->courses[idx].gradeCount;
     }
 
     return (1 + nCourses) + (1 + sName) + (nCourses + nGrades) + 1;

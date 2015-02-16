@@ -131,18 +131,33 @@ char* Student_toString(Student* student) {
 }
 
 size Student_coursesCount(Student* student) {
-    return PtrArray_CountSane((void**) student->courses, NMEMBERS(student->courses, Course*));
+    size idx = 0;
+
+    // How to write hard-to-follow C code in one easy line:
+    while(idx < NMEMBERS(student->courses, StudentEnrollment) && student->courses[idx++].course);
+
+    return idx;
 }
 
 long Student_courseIndex(Student* student, Course* course) {
     size nCourses = Student_coursesCount(student);
     for(size idx = 0; idx < nCourses; ++idx) {
-        if(Course_compareById(course, student->courses[idx]) == 0) {
+        if(Course_compareById(course, student->courses[idx].course) == 0) {
             return idx;
         }
     }
 
     return -1;
+}
+
+int StudentEnrollment_compareByCourseId(const void* a, const void* b) {
+    if(!a || !b) {
+        return (!a && !b) ? 0 : -1;
+    } else if(!((StudentEnrollment*)a)->course || !((StudentEnrollment*)b)->course) {
+        return (!((StudentEnrollment*)a)->course && !((StudentEnrollment*)b)->course) ? 0 : -1;
+    } else {
+        return ((StudentEnrollment*)a)->course->courseId - ((StudentEnrollment*)b)->course->courseId;
+    }
 }
 
 bool Student_removeCourse(Student* student, Course* course) {
@@ -152,14 +167,11 @@ bool Student_removeCourse(Student* student, Course* course) {
 
     size nCourses = Student_coursesCount(student);
 
-    if(courseIdx < NMEMBERS(student->courses, Course*) - 1) {
-        size moveAmt = nCourses - courseIdx - 1;
-        memmove(student->courses + courseIdx, student->courses + courseIdx + 1, sizeof(Course*) * moveAmt);
-        memmove(student->grades + courseIdx, student->courses + courseIdx + 1, sizeof(grade*) * moveAmt);
-        memmove(student->gradeCount + courseIdx, student->gradeCount + courseIdx + 1, sizeof(byte) * moveAmt);
-    } else {
-        student->courses[courseIdx] = NULL;
-    }
+    student->courses[courseIdx].course = NULL;
+    student->courses[courseIdx].gradeCount = 0;
+    memset(student->courses[courseIdx].grades, 0, sizeof(student->courses[courseIdx].grades));
+
+    qsort(student->courses, NMEMBERS(student->courses, StudentEnrollment), sizeof(StudentEnrollment), &StudentEnrollment_compareByCourseId);
 
     return true;
 }
@@ -169,9 +181,14 @@ bool Student_addCourse(Student* student, Course* course) {
     size nCourses = Student_coursesCount(student);
     if(nCourses >= NMEMBERS(student->courses, Course*)) return false;
 
-    student->courses[nCourses] = course;
-    memset(student->grades[nCourses], 0, NMEMBERS(student->grades[nCourses], grade) * sizeof(grade));
-    student->gradeCount[nCourses] = 0;
+    StudentEnrollment enrollment = {
+            .course = course
+    };
+
+    memset(enrollment.grades, 0, NMEMBERS(enrollment.grades, grade) * sizeof(grade));
+    enrollment.gradeCount = 0;
+
+    memcpy(&student->courses[nCourses], &enrollment, sizeof(StudentEnrollment));
 
     return true;
 }
