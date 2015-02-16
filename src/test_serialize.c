@@ -57,8 +57,9 @@ int main() {
             printf("-> Adding course to student %u of %lu\n", studentIdx + 1, nCourseStudents);
             Student* student = index.courses[courseIdx].students[studentIdx];
             size stCourseCt = Student_coursesCount(student);
-            student->courses[stCourseCt] = &index.courses[courseIdx];
+            Student_addCourse(student, &index.courses[courseIdx]);
             printf("----> %s\n", Student_toString(student));
+            printf("----> %s\n", Course_toString(student->courses[stCourseCt].course));
         }
 
         printf("-> Done: %s\n\n", Course_toString(&index.courses[courseIdx]));
@@ -146,7 +147,7 @@ int main() {
         printf("-> %s\n", Student_toString(&anotherIndex.students[studentIdx]));
         size nCourses = Student_coursesCount(&anotherIndex.students[studentIdx]);
         for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
-            printf("----> %s\n", Course_toString(anotherIndex.students[studentIdx].courses[courseIdx]));
+            printf("----> %s\n", Course_toString(anotherIndex.students[studentIdx].courses[courseIdx].course));
         }
     }
 
