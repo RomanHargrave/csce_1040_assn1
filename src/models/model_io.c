@@ -21,6 +21,8 @@
 #include "../util.h"
 
 #include "model_io.h"
+#include "../shell/model_display.h"
+#include "../tui.h"
 
 // Utility Functions ---------------------------------------------------------------------------------------------------
 
@@ -634,11 +636,12 @@ SerializationStatus GradeBook_serialize(GradeBook* gradeBook, byte* buffer) {
      */
     for(byte studentIdx = 0; studentIdx < nStudents; ++studentIdx) {
         size nStudentCourses = Student_coursesCount(&gradeBook->students[studentIdx]);
+        Student* student = &gradeBook->students[studentIdx];
 
         for(byte courseIdx = 0; courseIdx < nStudentCourses; ++courseIdx) {
-            if(!Array_Contains(gradeBook->courses, gradeBook->students[studentIdx].courses[courseIdx].course, nCourses, sizeof(Course), &Course_compareById)) {
-                printf("%s contains an illegal reference to %s, which does not reside in the open GradeBook\n",
-                        Student_toString(&gradeBook->students[studentIdx]), Course_toString(gradeBook->students[studentIdx].courses[courseIdx].course));
+            if(Array_Contains(gradeBook->courses, student->courses[courseIdx].course, nCourses, sizeof(Course), &Course_compareById) == false) {
+                printf("(%u) %s contains an illegal reference to %s, which does not reside in the open GradeBook\n",
+                        courseIdx, Student_toString(student), Course_toString(student->courses[courseIdx].course));
                 return ILLEGAL_COURSE_ID;
             }
         }
