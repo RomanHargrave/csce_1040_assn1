@@ -57,6 +57,10 @@ void Course_studentsTable(Course* course, char* table[][Course_STUDENT_COLUMNS_C
 
     for(size idx = 0; idx < nStudents; ++idx) {
         Student* student = course->students[idx];
+        if(!student){
+            strcpy(table[idx][0], "(null)");
+            continue;
+        }
         long selfIdx = Student_courseIndex(student, course);
         if(selfIdx < 0) continue;
         sprintf(table[idx][0], "%03u", student->studentId);
@@ -75,6 +79,10 @@ void Student_coursesTable(Student* student, char* table[][Student_COURSE_COLUMNS
 
     for(size idx = 0; idx < nCourses; ++idx) {
         Course* course = student->courses[idx].course;
+        if(!course) {
+            strcpy(table[idx][0], "(null)");
+            continue;
+        }
         sprintf(table[idx][0], "%02u", course->courseId);
         strcpy(table[idx][1], course->courseName);
         sprintf(table[idx][2], "%3.02f", GradeArray_average(student->courses[idx].grades, student->courses[idx].gradeCount));
