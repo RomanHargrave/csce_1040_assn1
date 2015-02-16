@@ -129,7 +129,7 @@ typedef struct S_Student {
      */
 //    Course* courses[4];
 
-    StudentEnrollment courses;
+    StudentEnrollment courses[4];
 
     /*
      * Multidimensional fixed array of unsigned 8-bit integers stores grades in relation to the course.
