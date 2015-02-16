@@ -19,12 +19,12 @@
 /*
  * Apply a grading function to a grade array.
  */
-int GradeArray_sum(grade*, size);
+int GradeArray_sum(grade[], size);
 
 /*
  * Calculate the average grade in a grade array
  */
-float GradeArray_average(grade*, size);
+float GradeArray_average(grade[], size);
 
 /*
  * Helper method that flattens the grade matrix of a student and averages that student's grades
@@ -40,18 +40,18 @@ float Course_averageGrade(Course* course);
 /*
  * Find the smallest grade in a grade array
  */
-grade GradeArray_smallest(grade*, size);
+grade GradeArray_smallest(grade[], size);
 
 /*
  * Find the largest grade in a grade array
  */
-grade GradeArray_largest(grade*, size);
+grade GradeArray_largest(grade[], size);
 
 /*
  * Shifts all contained grades +1 position
  * Value pointed to by the greatest pointer in the array will be returned, and will not be in the array any longer
  */
-grade GradeArray_addNew(grade*, size, grade);
+grade GradeArray_addNew(grade[], size, grade);
 
 // End Header "grading.h" ----------------------------------------------------------------------------------------------
 

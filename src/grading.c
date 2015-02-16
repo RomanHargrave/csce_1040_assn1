@@ -8,7 +8,7 @@
 #include <string.h>
 #include "grading.h"
 
-int GradeArray_sum(grade* gradePtr, size nGrades) {
+int GradeArray_sum(grade gradePtr[], size nGrades) {
     int accumulator = 0;
 
     for(size idx = 0; idx < nGrades; ++idx){
@@ -18,7 +18,7 @@ int GradeArray_sum(grade* gradePtr, size nGrades) {
     return accumulator;
 }
 
-float GradeArray_average(grade* gradePtr, size nGrades) {
+float GradeArray_average(grade gradePtr[], size nGrades) {
     return nGrades > 0 ? (float) GradeArray_sum(gradePtr, nGrades) / (float) nGrades : 0;
 }
 
@@ -49,7 +49,7 @@ float Course_averageGrade(Course* course) {
     return nStudents > 0 ? gradeAccum / nStudents : 0;
 }
 
-grade GradeArray_smallest(grade* gradePtr, size nGrades) {
+grade GradeArray_smallest(grade gradePtr[], size nGrades) {
     grade cache = MAX_GRADE;
 
     for(size idx = 0; idx < nGrades; ++idx) {
@@ -59,7 +59,7 @@ grade GradeArray_smallest(grade* gradePtr, size nGrades) {
     return cache;
 }
 
-grade GradeArray_largest(grade* gradePtr, size nGrades) {
+grade GradeArray_largest(grade gradePtr[], size nGrades) {
     grade cache = 0;
 
     for(size idx = 0; idx < nGrades; ++idx) {
@@ -69,7 +69,7 @@ grade GradeArray_largest(grade* gradePtr, size nGrades) {
     return cache;
 }
 
-grade GradeArray_addNew(grade* gradePtr, size nGrades, grade newGrade) {
+grade GradeArray_addNew(grade gradePtr[], size nGrades, grade newGrade) {
 
     /*
      * Get the grade from the pointer of greatest value
