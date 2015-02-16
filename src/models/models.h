@@ -82,6 +82,12 @@ size Course_studentsCount(Course* course);
  */
 int Course_compareById(const void *a, const void *b);
 
+bool Course_addStudent(Course* course, Student* student);
+
+bool Course_remStudentIndex(Course* course, size index);
+
+bool Course_remStudent(Course* course, Student* student);
+
 /*
  * String format of a course. Displays only course id, and course name.
  * Defined in models.c
@@ -127,23 +133,7 @@ typedef struct S_Student {
      * I'll detail model serialization further in the serializer implementation.
      * This makes the effective size of this member at serialization-time 32 bits, or 4 bytes.
      */
-//    Course* courses[4];
-
     StudentEnrollment courses[4];
-
-    /*
-     * Multidimensional fixed array of unsigned 8-bit integers stores grades in relation to the course.
-     * Where the first index specifies the course number (as it occurs in courses[_]).
-     *
-     * Effectively, this is 40 bytes long
-     */
-//    grade grades[4][10];
-
-    /*
-     * Indicates the number of grades a student has in a course
-     * Where the index of the course in the Course* array relates to the index in this array.
-     */
-//    byte gradeCount[4];
 
     /**
     * 2-byte integer describes student ID.
