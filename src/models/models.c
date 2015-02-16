@@ -9,6 +9,7 @@
 
 #include <string.h>
 #include <stdio.h>
+#include <strings.h>
 #include "models.h"
 #include "../grading.h"
 
@@ -204,10 +205,15 @@ size GradeBook_removeCourse(GradeBook* book, Course* course) {
 }
 
 size GradeBook_removeCourseIndex(GradeBook* book, size index) {
-    if(index < book->coursesCount){
-        Course* replacement = &book->courses[--book->coursesCount];
+    if(index == book->coursesCount - 1){
+        --book->coursesCount;
+    } else if(index < book->coursesCount) {
+        Course* replacement = &book->courses[book->coursesCount - 2];
+
+        --book->coursesCount;
+
         memmove(&book->courses[index], replacement, sizeof(Course));
-        memset(&book->courses[book->coursesCount], 0, sizeof(Course));
+
         GradeBook_sortCourses(book);
     }
     return book->coursesCount;
