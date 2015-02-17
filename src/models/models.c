@@ -17,64 +17,6 @@
 const grade MAX_GRADE = 0xFF;
 const grade MIN_GRADE = 0x00;
 
-// Course --------------------------------------------------------------------------------------------------------------
-
-int Course_compareById(const void* a, const void* b){
-    if(!a | !b){
-        return (!a && !b) ? 0 : -1;
-    } else {
-        return ((Course*)a)->courseId - ((Course*)b)->courseId;
-    }
-}
-
-const char* Course_stringFormat = "Course{ .courseId = %03u, .courseName = \"%s\", .students[%02u] }";
-
-char* Course_toString(Course* course) {
-    if(!course) return "(Course)null";
-    char* nameFormatted[strlen(Course_stringFormat) + strlen(course->courseName)];
-    sprintf((char*) nameFormatted, Course_stringFormat, course->courseId, course->courseName, Course_studentsCount(course));
-
-    return nameFormatted;
-}
-
-size Course_studentsCount(Course* course) {
-    return PtrArray_CountSane((void**) course->students, NMEMBERS(course->students, Student*));
-}
-
-bool Course_addStudent(Course* course, Student* student) {
-
-    if(Course_studentsCount(course) >= NMEMBERS(course->students, Student*)) return false;
-
-    course->students[Course_studentsCount(course)] = student;
-
-    qsort(course->students, Course_studentsCount(course), sizeof(Student*), &Student_compareById);
-
-    return true;
-}
-
-bool Course_remStudentIndex(Course* course, size index) {
-
-    size initialSize = Course_studentsCount(course);
-
-    course->students[index] = NULL;
-
-    qsort(course->students, initialSize, sizeof(Student*), &Student_compareById);
-
-    return true;
-}
-
-bool Course_remStudent(Course* course, Student* student) {
-    size initialSize = Course_studentsCount(course);
-
-    for(size idx = 0; idx < initialSize; ++idx) {
-        if(Student_compareById(student, course->students[idx]) == 0){
-            return Course_remStudentIndex(course, idx);
-        }
-    }
-
-    return false;
-}
-
 // Student -------------------------------------------------------------------------------------------------------------
 
 int Student_compareById(const void *a, const void *b){
@@ -171,6 +113,67 @@ bool Student_addGrade(Student* student, Course* course, grade grade) {
     return true;
 }
 
+// Course --------------------------------------------------------------------------------------------------------------
+
+int Course_compareById(const void* a, const void* b){
+    if(!a | !b){
+        return (!a && !b) ? 0 : -1;
+    } else {
+        return ((Course*)a)->courseId - ((Course*)b)->courseId;
+    }
+}
+
+const char* Course_stringFormat = "Course{ .courseId = %03u, .courseName = \"%s\", .students[%02u] }";
+
+char* Course_toString(Course* course) {
+    if(!course) return "(Course)null";
+    char* nameFormatted[strlen(Course_stringFormat) + strlen(course->courseName)];
+    sprintf((char*) nameFormatted, Course_stringFormat, course->courseId, course->courseName, Course_studentsCount(course));
+
+    return nameFormatted;
+}
+
+size Course_studentsCount(Course* course) {
+    return PtrArray_CountSane((void**) course->students, NMEMBERS(course->students, Student*));
+}
+
+bool Course_addStudent(Course* course, Student* student) {
+
+    if(Course_studentsCount(course) >= NMEMBERS(course->students, Student*)) return false;
+
+    course->students[Course_studentsCount(course)] = student;
+
+    qsort(course->students, Course_studentsCount(course), sizeof(Student*), &Student_compareById);
+
+    Student_addCourse(student, course);
+
+    return true;
+}
+
+bool Course_remStudentIndex(Course* course, size index) {
+
+    size initialSize = Course_studentsCount(course);
+
+    course->students[index] = NULL;
+
+    qsort(course->students, initialSize, sizeof(Student*), &Student_compareById);
+
+    return true;
+}
+
+bool Course_remStudent(Course* course, Student* student) {
+    size initialSize = Course_studentsCount(course);
+
+    for(size idx = 0; idx < initialSize; ++idx) {
+        if(Student_compareById(student, course->students[idx]) == 0){
+            return Course_remStudentIndex(course, idx);
+        }
+    }
+
+    Student_removeCourse(student, course);
+
+    return false;
+}
 
 // GradeBook -----------------------------------------------------------------------------------------------------------
 
@@ -222,7 +225,7 @@ size GradeBook_removeCourseIndex(GradeBook* book, size index) {
 
 
 bool Course_isValidId(long number) {
-    return (number > BYTE_MIN) && (number < BYTE_MAX);
+    return (number >= BYTE_MIN) && (number <= BYTE_MAX);
 }
 
 // -- Student Management -----------------------------------------------------------------------------------------------
@@ -262,5 +265,5 @@ size GradeBook_removeStudentIndex(GradeBook* book, size index) {
 }
 
 bool Student_isValidId(long number) {
-    return (number > BYTE_MIN) && (number < BYTE_MAX);
+    return (number >= BYTE_MIN) && (number <= BYTE_MAX);
 }

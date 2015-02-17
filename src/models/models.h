@@ -178,9 +178,13 @@ char* Student_toString(Student* student);
 
 long Student_courseIndex(Student* student, Course* course);
 
-bool Student_removeCourse(Student* student, Course* course);
-
-bool Student_addCourse(Student* student, Course* course);
+/*
+ * These two functions should not be exposed to external callers, as they should be called by the Course_addStudent, and Course_removeStudent actions
+ *
+ * bool Student_removeCourse(Student* student, Course* course);
+ *
+ * bool Student_addCourse(Student* student, Course* course);
+ */
 
 bool Student_isValidId(long number);
 
