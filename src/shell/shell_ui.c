@@ -2,23 +2,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
+#include "commands/command.h"
 #include "options.h"
 #include "../models/model_io.h"
 #include "../tui.h"
 #include "model_display.h"
 #include "../grading.h"
-
-typedef enum E_ShellReturn {
-
-    SR_SUCCESS  = 0x0,
-    SR_FAILURE  = 0x1,
-    SR_EXIT     = 0x2,
-    SR_SAVE     = 0x3,
-    SR_LOAD     = 0x4
-
-} ShellReturn;
-
-typedef ShellReturn(*ShellCommand)(char*, GradeBook* gradeBook);
 
 void openGradeBook(char* path, GradeBook* destination) {
 
@@ -45,14 +34,16 @@ void saveGradeBook(char* path, GradeBook* source) {
 }
 
 const char* commandTable[][3] = {
-        {"help",        "",                 "Display this message"},
-        {"exit",        "",                 "Exit the application"},
-        {"load",        "[path]",           "Load the gradebook. If a path is specified, it will be loaded from there."},
-        {"save",        "[path]",           "Save the gradebook. If a path is specified, it will be saved there."},
-        {"index",       "",                 "List all courses and students in the GradeBook"},
-        {"courses",     "",                 "List all courses"},
-        {"students",    "",                 "List all students"},
-        {"student",     "show|add|rm <id>", "show, add, or remove a student specified by <id>"}
+        {"help",        "",                     "Display this message"},
+        {"exit",        "",                     "Exit the application"},
+        {"load",        "[path]",               "Load the gradebook. If a path is specified, it will be loaded from there."},
+        {"save",        "[path]",               "Save the gradebook. If a path is specified, it will be saved there."},
+        {"index",       "",                     "List all courses and students in the GradeBook"},
+        {"courses",     "",                     "List all courses"},
+        {"course",      "show|add|rm <id>",     "show, add, or remove a course specified by <id>"},
+        {"students",    "",                     "List all students"},
+        {"student",     "show|add|rm <id>",     "show, add, or remove a student specified by <id>"},
+        {"enroll",      "add|rm <sid> <cid>",   "add/remove (enroll/disenroll) a student, <sid>, in a course <cid>"}
 };
 
 ShellReturn Command_help(char* args, GradeBook* gradeBook) {
@@ -108,158 +99,25 @@ ShellReturn Command_save(char* args, GradeBook* gradeBook) {
     }
 }
 
-ShellReturn Command_courseList(char* args, GradeBook* gradeBook) {
-
-    size nCourses = gradeBook->coursesCount;
-    char* table[nCourses][GradeBook_COURSE_COLUMN_COUNT];
-    for(size idx = 0; idx < nCourses; ++idx){
-        table[idx][0]   = calloc(sizeof(char), 255);
-        table[idx][1]   = calloc(sizeof(char), 255);
-        table[idx][2]   = calloc(sizeof(char), 255);
-        table[idx][3]   = calloc(sizeof(char), 255);
-    }
-
-    GradeBook_courseTable(gradeBook, table);
-
-    Table_printRows(stdout, GradeBook_COURSE_COLUMN_COUNT, nCourses, GradeBook_COURSE_TABLE_COLUMNS, table);
-
-    for(size idx = 0; idx < nCourses; ++idx){
-        free(table[idx][0]);
-        free(table[idx][1]);
-        free(table[idx][2]);
-        free(table[idx][3]);
-    }
-
-    return SR_SUCCESS;
-}
-
-ShellReturn Command_studentList(char* args, GradeBook* gradeBook) {
-
-    size nStudents = gradeBook->studentsCount;
-    char* table[nStudents][GradeBook_STUDENT_COLUMN_COUNT];
-    for(size idx = 0; idx < nStudents; ++idx){
-        table[idx][0]   = calloc(sizeof(char), 255);
-        table[idx][1]   = calloc(sizeof(char), 255);
-        table[idx][2]   = calloc(sizeof(char), 255);
-        table[idx][3]   = calloc(sizeof(char), 255);
-    }
-
-    GradeBook_studentsTable(gradeBook, table);
-
-    Table_printRows(stdout, GradeBook_STUDENT_COLUMN_COUNT, nStudents, GradeBook_STUDENT_TABLE_COLUMNS, table);
-
-    for(size idx = 0; idx < nStudents; ++idx){
-        free(table[idx][0]);
-        free(table[idx][1]);
-        free(table[idx][2]);
-        free(table[idx][3]);
-    }
-
-    return SR_SUCCESS;
-}
-
-ShellReturn Command_index(char* args, GradeBook* gradeBook) {
-
-    printf( "Courses: \n"
-            "+-----------+\n");
-
-    Command_courseList(args, gradeBook);
-
-    printf( "Students: \n"
-            "+-----------+\n");
-
-    Command_studentList(args, gradeBook);
-
-    return SR_SUCCESS;
-}
-
 ShellReturn Command_unknown(char* args, GradeBook* gradeBook) {
     printf("Unknown command. See `help` for more information.\n");
     return SR_FAILURE;
 }
 
-ShellReturn Command_student(char* args, GradeBook* gradeBook) {
+/*
+ * External commands
+ */
 
-    char* action    = strtok(NULL, " ");
-    char* studentId = strtok(NULL, " ");
+ShellReturn Command_courseList(char* args, GradeBook* gradeBook);
+ShellReturn Command_studentList(char* args, GradeBook* gradeBook);
+ShellReturn Command_index(char* args, GradeBook* gradeBook);
 
-    if(!action | !studentId) {
-        printf("Please specify an action and studentId (show, add, rm)\n");
-        return SR_FAILURE;
-    }
 
-    size idNum = strtoul(studentId, NULL, 10);
+ShellReturn Command_student(char* args, GradeBook* gradeBook);
 
-    if(idNum > BYTE_MAX) {
-        printf("`id` must be a value between %u and %u inclusive\n", BYTE_MIN, BYTE_MAX);
-        return SR_FAILURE;
-    }
+ShellReturn Command_course(char* args, GradeBook* gradeBook);
 
-    Student* student = bsearch(&(Student){.studentId = (byte)idNum}, gradeBook->students, gradeBook->studentsCount, sizeof(Student), &Student_compareById);
-
-    if(!student && (strcmp(action, "add") != 0)) {
-        printf("No student could be found with the studentId `%lu`\n", idNum);
-        return SR_FAILURE;
-    }
-
-    if((strcmp(action, "show") == 0)) {
-        size nCourses = Student_coursesCount(student);
-        printf("Student «%s». %lu courses. Overall average is %3.02f\n\n", student->studentName, Student_coursesCount(student), Student_averageGrade(student));
-
-        char* table[nCourses][Student_COURSE_COLUMNS_COUNT];
-        Table_allocStrings(nCourses, Student_COURSE_COLUMNS_COUNT, table, 255);
-        Student_coursesTable(student, table);
-        Table_printRows(stdout, Student_COURSE_COLUMNS_COUNT, nCourses, Student_COURSE_COLUMNS, table);
-        Table_unallocStrings(nCourses, Student_COURSE_COLUMNS_COUNT, table);
-    } else if(strcmp(action, "add") == 0) {
-
-        if(gradeBook->studentsCount >= NMEMBERS(gradeBook->students, student)) {
-            printf("No more students may be stored in the gradebook\n");
-            return SR_FAILURE;
-        }
-
-        char nameBuffer[255];
-
-        printf("Enter a student name: ");
-        fflush(stdout);
-        fgets(nameBuffer, 254, stdin);
-
-        String_trim(nameBuffer);
-
-        Student newStudent = {
-                .studentId = (byte) idNum,
-        };
-
-        strcpy(newStudent.studentName, nameBuffer);
-
-        GradeBook_addStudent(gradeBook, newStudent);
-
-        printf("Student added\n");
-    } else if(strcmp(action, "rm") == 0) {
-
-        if(gradeBook->studentsCount == 0) {
-            printf("There are no students in the gradebook\n");
-            return SR_FAILURE;
-        }
-
-        char response[2];
-
-        printf("Remove %s? (y/N): ", Student_toString(student));
-        fflush(stdout);
-        scanf("%1s", response);
-
-        if(strcmp(response, "y") == 0 || strcmp(response, "Y") == 0) {
-            GradeBook_removeStudent(gradeBook, student);
-            printf("Student removed\n");
-        }
-
-    } else {
-        printf("Invalid action `%s`\n", action);
-        return SR_FAILURE;
-    }
-
-    return SR_SUCCESS;
-}
+ShellReturn Command_enroll(char* args, GradeBook* gradeBook);
 
 const struct A_CommandAssocation {
 
@@ -277,13 +135,9 @@ const struct A_CommandAssocation {
     {"students",            &Command_studentList},
     {"student",             &Command_student},
     {"courses",             &Command_courseList},
-    {"course_new",          NULL},
-    {"course_rm",           NULL},
-    {"course_show",         NULL},
-    {"student_addCourse",   NULL},
-    {"student_rmCourse",    NULL},
-    {"student_addGrade",    NULL},
-    {"student_delGrade",    NULL}
+    {"course",              &Command_course},
+    {"enroll",              &Command_enroll},
+    {"grade",               NULL}
 
 };
 

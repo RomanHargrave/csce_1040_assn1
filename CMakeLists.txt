@@ -14,6 +14,11 @@ set(SOURCE_FILES
     src/tui.c
     src/grading.h
     src/grading.c
+    src/shell/commands/command.h
+    src/shell/commands/gradebook.c
+    src/shell/commands/student.c
+    src/shell/commands/course.c
+    src/shell/commands/enrollment.c
     src/shell/options.h
     src/shell/shell_ui.c
     src/shell/print_gradebook.c
