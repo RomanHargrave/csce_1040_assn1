@@ -2,9 +2,15 @@
 #include <stdarg.h>
 #include "debug.h"
 
+#ifdef _GB_DEBUG
+const static bool GB_DEBUG = true;
+#else
+const static bool GB_DEBUG = false;
+#endif
+
 void d_printf(const char* format, ...) {
 
-#ifdef _GB_DEBUG
+    if(!GB_DEBUG) return;
 
     va_list arguments;
     va_start(arguments, format);
@@ -14,11 +20,5 @@ void d_printf(const char* format, ...) {
     va_end(arguments);
     fputs(buffer, stdout);
     fflush(stdout);
-
-#else
-
-    return;
-
-#endif
 
 }
