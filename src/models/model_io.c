@@ -23,6 +23,7 @@
 #include "model_io.h"
 #include "../shell/model_display.h"
 #include "../tui.h"
+#include "../debug.h"
 
 // Utility Functions ---------------------------------------------------------------------------------------------------
 
@@ -437,7 +438,7 @@ typedef struct S_IStudent {
      */
     byte grades[4][10];
 
-    byte gradeCount[4];
+    size gradeCount[4];
 
     /**
     * 2-byte integer describes student ID.
@@ -476,6 +477,7 @@ IStudent IStudent_fromStudent(Student* student) {
     strncpy(iStudent.studentName, student->studentName, strlen(student->studentName));
 
     for(byte idx = 0; idx < iStudent.coursesCount; ++idx) {
+        d_printf("[Student->IStudent] (Pre) Course[%02u] { gradeCount = %lu } | Primitive = %lu \n", idx, student->courses[idx].gradeCount, iStudent.gradeCount[idx]);
         iStudent.courses[idx]       = student->courses[idx].course->courseId;
         iStudent.gradeCount[idx]    = (byte) student->courses[idx].gradeCount;
         memcpy(iStudent.grades[idx], student->courses[idx].grades, sizeof(student->courses[idx].grades));
@@ -500,6 +502,7 @@ Student IStudent_toStudent(IStudent* iStudent) {
 
     // For each course, copy grades from the primitive model, to the non-primitive model
     for(byte idx = 0; idx < nCourses; ++idx) {
+        d_printf("[IStudent->Student] (Pre) Course[%02u] { gradeCount = %lu } | Primitive = %lu \n", idx, student.courses[idx].gradeCount, iStudent->gradeCount[idx]);
         student.courses[idx].gradeCount = iStudent->gradeCount[idx];
         memcpy(student.courses[idx].grades, iStudent->grades[idx], sizeof(iStudent->grades[idx]));
     }
@@ -525,7 +528,8 @@ size IStudent_serialize(IStudent* student, byte* receiver, size offset) {
     for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
 
         // Get the length of the relative course signified by courseIdx (grades[courseIdx] corresponds to courses[courseIdx] grades)
-        byte nGrades = student->gradeCount[courseIdx];
+        byte nGrades = (byte) student->gradeCount[courseIdx];
+        d_printf("[IStudent>>FD] (Pre) gradeCount[%02u] = %u \n", courseIdx, nGrades);
         receiver[idx++] = nGrades;
 
         // For each grade, write the grade as one byte
@@ -567,9 +571,13 @@ size IStudent_deserialize(byte* data, size offset, IStudent* destination) {
     for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
 
         // Get the number of grades associated with this course
+        d_printf("[FD>>IStudent] (Pre) gradeCount[%02u] = %u \n", courseIdx, data[idx]);
         byte nGrades    = data[idx++];
+        destination->gradeCount[courseIdx] = nGrades;
+        d_printf("[FD>>IStudent] (Post) gradeCount[%02u] = %u \n", courseIdx, (byte) destination->gradeCount[courseIdx]);
 
         // Copy each grade, if any, in to the associated index
+
         for(byte gradeIdx = 0; gradeIdx < nGrades; ++gradeIdx) {
             destination->grades[courseIdx][gradeIdx] = data[idx++];
         }

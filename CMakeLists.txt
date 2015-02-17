@@ -8,6 +8,8 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lm")
 set(SOURCE_FILES
     src/util.h
     src/util.c
+    src/debug.h
+    src/debug.c
     src/tui.h
     src/tui.c
     src/grading.h
@@ -22,5 +24,6 @@ set(SOURCE_FILES
     src/models/model_io.h
     src/models/model_io.c)
 
-add_executable(test_serialize ${SOURCE_FILES} src/test_serialize.c)
+add_executable(test_manip ${SOURCE_FILES} src/tests/test_manipulation.c)
+add_executable(test_serialize ${SOURCE_FILES} src/tests/test_serialize.c)
 add_executable(gradebook ${SOURCE_FILES} src/shell.c)
