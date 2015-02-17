@@ -99,6 +99,8 @@ extern const char* Course_stringFormat;
  */
 char* Course_toString(Course* course);
 
+bool Course_isValidId(long number);
+
 //#define Course_toString(course, string) sprintf(string, Course_stringFormat, course->courseId, course->courseName)
 
 // Student -------------------------------------------------------------------------------------------------------------
@@ -179,6 +181,8 @@ long Student_courseIndex(Student* student, Course* course);
 bool Student_removeCourse(Student* student, Course* course);
 
 bool Student_addCourse(Student* student, Course* course);
+
+bool Student_isValidId(long number);
 
 //#define Student_toString(student, string) sprintf(string, Student_stringFormat, student->studentId, student->studentName)
 

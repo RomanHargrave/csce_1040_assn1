@@ -10,6 +10,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <strings.h>
+#include <slcurses.h>
 #include "models.h"
 #include "../grading.h"
 
@@ -219,6 +220,11 @@ size GradeBook_removeCourseIndex(GradeBook* book, size index) {
     return book->coursesCount;
 }
 
+
+bool Course_isValidId(long number) {
+    return (number > BYTE_MIN) && (number < BYTE_MAX);
+}
+
 // -- Student Management -----------------------------------------------------------------------------------------------
 
 void GradeBook_sortStudents(GradeBook* book) {
@@ -233,7 +239,7 @@ size GradeBook_addStudent(GradeBook* book, Student student) {
 
 size GradeBook_removeStudent(GradeBook* book, Student* student) {
     for(size idx = 0; idx < book->studentsCount; ++idx) {
-        if(&book->students[idx] == student) {
+        if(Student_compareById(student, &book->students[idx]) == 0) {
             return GradeBook_removeStudentIndex(book, idx);
         }
     }
@@ -253,4 +259,8 @@ size GradeBook_removeStudentIndex(GradeBook* book, size index) {
         GradeBook_sortStudents(book);
     }
     return book->studentsCount;
+}
+
+bool Student_isValidId(long number) {
+    return (number > BYTE_MIN) && (number < BYTE_MAX);
 }
