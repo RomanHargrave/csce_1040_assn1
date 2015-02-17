@@ -104,7 +104,7 @@ typedef enum E_Align {
 
 void String_alignInSpace(const char* string, size width, Align alignment, char destination[]) {
 
-    size strLength = strlen(string) + 1;
+    size strLength = strlen(string);
 
     if(strlen(string) >= width) {
         strncpy(destination, string, width);
@@ -117,7 +117,9 @@ void String_alignInSpace(const char* string, size width, Align alignment, char d
     memset(filler, ' ', shift);
     filler[shift] = NULL;
 
-    sprintf(destination, "%s%s",
+
+
+    sprintf(destination,"%s%s",
             (alignment == RIGHT ? filler : string), (alignment == RIGHT ? string : filler));
 }
 
