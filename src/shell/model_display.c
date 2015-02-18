@@ -45,10 +45,8 @@ void GradeBook_studentsTable(GradeBook* gradeBook, char* table[][GradeBook_STUDE
 
 }
 
-char* gradeStringifier(const void* gVal) {
-    char buff[numberWidth(sizeof(grade), 10)];
-    sprintf(buff, "%u", *(grade*)gVal);
-    return buff;
+void gradeStringifier(const void* gVal, FILE* stream) {
+    fprintf(stream, "%u", *(grade*)gVal);
 }
 
 void Course_studentsTable(Course* course, char* table[][Course_STUDENT_COLUMNS_COUNT]) {

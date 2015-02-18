@@ -71,24 +71,22 @@ size numberWidth(size numberSize, byte displayBase) {
     return 1 + (size)floor(log(pow(16, (numberSize * 2)) - 1)/log(displayBase));
 }
 
-char* Array_toString(const void* array, size nElements, size memberSize, char* delim, char* (* stringifier)(void const*)) {
+char* Array_toString(const void* array, size nElements, size memberSize, char* delim, Stringifier stringifier) {
 
-    /*
-     * Collection of string arrays produced by the stringifier
-     * We get the size by finding the largest possible element
-     */
+    if(nElements == 0) return NULL;
 
-    size lengthTotal = (nElements - 1) * (strlen(delim));
+    char* buffer;
+    size_t bufferSize;
+    FILE* builderStream = open_memstream(&buffer, &bufferSize);
+
     for(size idx = 0; idx < nElements; ++idx) {
-        lengthTotal += strlen(stringifier(array + (idx * memberSize)));
+        if(idx > 0) fputs(delim, builderStream);
+        stringifier(array + (idx * memberSize), builderStream);
     }
 
-    char* buffer = calloc(sizeof(char), lengthTotal);
-
-    for(size idx = 0; idx < nElements; ++idx) {
-        char* str = stringifier(array + (idx * memberSize));
-        if(idx > 0) strcat(buffer, delim);
-        strcat(buffer, str);
+    if(builderStream) {
+        fflush(builderStream);
+        fclose(builderStream);
     }
 
     return buffer;

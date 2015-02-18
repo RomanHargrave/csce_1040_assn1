@@ -25,7 +25,8 @@ size numberWidth(size numberSize, byte displayBase);
  * Once this process is complete, Array_toString will return the string. In order to get the string's length,
  * strlen may be called upon the return value.
  */
-char* Array_toString(const void* array, size nElements, size memberSize, char* delim, char*(*stringifier)(const void*));
+typedef void (* Stringifier)(void const*, FILE*);
+char* Array_toString(const void* array, size nElements, size memberSize, char* delim, Stringifier stringifier);
 
 void Table_allocStrings(size nrows, size ncolumns, char* rows[nrows][ncolumns], size strlen);
 
