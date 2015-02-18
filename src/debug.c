@@ -14,9 +14,11 @@ void d_printf(const char* format, ...) {
 
     va_list arguments;
 
+    printf("[D] ");
+
     va_start(arguments, format);
 
-    vfprintf(stderr, format, arguments);
+    vfprintf(stdout, format, arguments);
 
     va_end(arguments);
 
