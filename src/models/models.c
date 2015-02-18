@@ -107,19 +107,6 @@ bool Student_addCourse(Student* student, Course* course) {
     return true;
 }
 
-bool Student_addGrade(Student* student, Course* course, grade grade) {
-
-    long courseIndex = Student_courseIndex(student, course);
-    if(courseIndex < 0) return false;
-
-    StudentEnrollment* courseRel = &student->courses[courseIndex];
-
-    GradeArray_addNew(courseRel->grades, NMEMBERS(courseRel->grades, grade), grade);
-    courseRel->gradeCount++;
-
-    return true;
-}
-
 // Course --------------------------------------------------------------------------------------------------------------
 
 int Course_compareById(const void* a, const void* b){
