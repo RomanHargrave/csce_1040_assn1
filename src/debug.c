@@ -3,9 +3,9 @@
 #include "debug.h"
 
 #ifdef _GB_DEBUG
-const static bool GB_DEBUG = true;
+const bool GB_DEBUG = true;
 #else
-const static bool GB_DEBUG = false;
+const bool GB_DEBUG = false;
 #endif
 
 void d_printf(const char* format, ...) {
@@ -13,12 +13,11 @@ void d_printf(const char* format, ...) {
     if(!GB_DEBUG) return;
 
     va_list arguments;
+
     va_start(arguments, format);
-    int length = vsnprintf(NULL, 0, format, arguments);
-    char buffer[length + 1];
-    vsprintf(buffer, format, arguments);
+
+    vfprintf(stderr, format, arguments);
+
     va_end(arguments);
-    fputs(buffer, stdout);
-    fflush(stdout);
 
 }
