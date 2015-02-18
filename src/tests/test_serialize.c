@@ -1,7 +1,7 @@
-#include "models/model_io.h"
+#include "../models/model_io.h"
 
-const byte nStudents    = 18;
-const byte nCourses     = 3;
+const byte nStudents    = 100;
+const byte nCourses     = 25;
 const char* fileName    = "serial_gradebook.gb";
 
 int main() {
@@ -42,24 +42,18 @@ int main() {
     printf("Associate students and courses\n");
 
     for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
+        char* courseName = Course_toString(&index.courses[courseIdx]);
 
-        printf("Associations for %s:\n\n", Course_toString(&index.courses[courseIdx]));
+        printf("Associations for %s:\n\n", courseName);
 
         for(byte studentOffset = 0; studentOffset < (nStudents / nCourses); ++studentOffset) {
             printf("-> Adding student %u of %u\n", studentOffset + 1, (nStudents / nCourses));
             byte start = courseIdx * (nStudents / nCourses);
-            index.courses[courseIdx].students[studentOffset] = &index.students[start + studentOffset];
+            Course_addStudent(&index.courses[courseIdx], &index.students[start + studentOffset]);
         }
 
-        size nCourseStudents = Course_studentsCount(&index.courses[courseIdx]);
-
-        for(byte studentIdx = 0; studentIdx < nCourseStudents; ++studentIdx) {
-            printf("-> Adding course to student %u of %lu\n", studentIdx + 1, nCourseStudents);
-            Student* student = index.courses[courseIdx].students[studentIdx];
-            Student_addCourse(student, &index.courses[courseIdx]);
-        }
-
-        printf("-> Done: %s\n\n", Course_toString(&index.courses[courseIdx]));
+        printf("-> Done: %s\n\n", courseName);
+        free(courseName);
     }
 
     printf("Opening file %s\n", fileName);
@@ -133,18 +127,26 @@ int main() {
     printf("Read %s \n", GradeBook_toString(&anotherIndex));
 
     for(byte courseIdx = 0; courseIdx < anotherIndex.coursesCount; ++courseIdx) {
-        printf("-> %s\n", Course_toString(&anotherIndex.courses[courseIdx]));
+        char* courseName = Course_toString(&anotherIndex.courses[courseIdx]);
+        printf("-> %s\n", courseName);
+        free(courseName);
         size nStudents = Course_studentsCount(&anotherIndex.courses[courseIdx]);
         for(byte studentIdx = 0; studentIdx < nStudents; ++studentIdx) {
-            printf("----> %s\n", Student_toString(anotherIndex.courses[courseIdx].students[studentIdx]));
+            char* studentName = Student_toString(anotherIndex.courses[courseIdx].students[studentIdx]);
+            printf("----> %s\n", studentName);
+            free(studentName);
         }
     }
 
     for(byte studentIdx = 0; studentIdx < anotherIndex.studentsCount; ++ studentIdx) {
-        printf("-> %s\n", Student_toString(&anotherIndex.students[studentIdx]));
+        char* studentName = Student_toString(&anotherIndex.students[studentIdx]);
+        printf("-> %s\n", studentName);
+        free(studentName);
         size nCourses = Student_coursesCount(&anotherIndex.students[studentIdx]);
         for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
-            printf("----> %s\n", Course_toString(anotherIndex.students[studentIdx].courses[courseIdx].course));
+            char* courseName = Course_toString(anotherIndex.students[studentIdx].courses[courseIdx].course);
+            printf("----> %s\n", courseName);
+            free(courseName);
         }
     }
 

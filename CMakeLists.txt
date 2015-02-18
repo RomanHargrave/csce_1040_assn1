@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 2.8.4)
 project(homework_01)
 
-add_definitions(-D__USE_POSIX)
+add_definitions(-D_GNU_SOURCE)
+
+# Uncomment for debug output!
+add_definitions(-D_GB_DEBUG)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lm")
 

@@ -88,7 +88,9 @@ ShellReturn Command_student(char* args, GradeBook* gradeBook) {
 
         char response[2];
 
-        printf("Remove %s? (y/N): ", Student_toString(student));
+        char* studentName = Student_toString(student);
+        printf("Remove %s? (y/N): ", studentName);
+        free(studentName);
         fflush(stdout);
         scanf("%1s", response);
 

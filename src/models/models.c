@@ -10,12 +10,14 @@
 #include <string.h>
 #include <stdio.h>
 #include <strings.h>
-#include <slcurses.h>
 #include "models.h"
 #include "../grading.h"
+#include "../tui.h"
 
 const grade MAX_GRADE = 0xFF;
 const grade MIN_GRADE = 0x00;
+
+static const size _GB_TOSTRING_INITIAL = 256;
 
 // Student -------------------------------------------------------------------------------------------------------------
 
@@ -30,11 +32,16 @@ int Student_compareById(const void *a, const void *b){
 const char* Student_stringFormat = "Student{ .studentId = %03u, .studentName = \"%s\", .courses[%u] }";
 
 char* Student_toString(Student* student) {
-    if(!student) return "(Student)null";
-    char* nameFormatted[strlen(Student_stringFormat) + strlen(student->studentName) + 15];
-    sprintf((char*) nameFormatted, Student_stringFormat, student->studentId, student->studentName, Student_coursesCount(student));
 
-    return nameFormatted;
+    char* buffer;
+
+    if(student) {
+        asprintf(&buffer, Student_stringFormat, student->studentId, student->studentName, Student_coursesCount(student));
+    } else {
+        asprintf(&buffer, "(null: Student)");
+    }
+
+    return buffer;
 }
 
 size Student_coursesCount(Student* student) {
@@ -126,11 +133,17 @@ int Course_compareById(const void* a, const void* b){
 const char* Course_stringFormat = "Course{ .courseId = %03u, .courseName = \"%s\", .students[%02u] }";
 
 char* Course_toString(Course* course) {
-    if(!course) return "(Course)null";
-    char* nameFormatted[strlen(Course_stringFormat) + strlen(course->courseName)];
-    sprintf((char*) nameFormatted, Course_stringFormat, course->courseId, course->courseName, Course_studentsCount(course));
 
-    return nameFormatted;
+    char* buffer;
+
+    if(course) {
+        asprintf(&buffer, Course_stringFormat, course->courseId, course->courseName, Course_studentsCount(course));
+    } else {
+        asprintf(&buffer, "(null: Course)");
+    }
+
+    return buffer;
+
 }
 
 size Course_studentsCount(Course* course) {

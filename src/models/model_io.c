@@ -628,11 +628,19 @@ SerializationStatus GradeBook_serialize(GradeBook* gradeBook, byte* buffer) {
      */
     for(byte courseIdx = 0; courseIdx < nCourses; ++courseIdx) {
         size nCourseStudents = Course_studentsCount(&gradeBook->courses[courseIdx]);
+        Course* course = &gradeBook->courses[courseIdx];
 
         for(byte studentIdx = 0; studentIdx < nCourseStudents; ++studentIdx) {
-            if(!Array_Contains(gradeBook->students, gradeBook->courses[courseIdx].students[studentIdx], nStudents, sizeof(Student), &Student_compareById)) {
+            if(!Array_Contains(gradeBook->students, course->students[studentIdx], nStudents, sizeof(Student), &Student_compareById)) {
+                char* studentName = Student_toString(course->students[studentIdx]);
+                char* courseName = Course_toString(course);
+
                 printf("%s contains an illegal reference to %s, which does not reside in the open GradeBook\n",
-                        Course_toString(&gradeBook->courses[courseIdx]), Student_toString(gradeBook->courses[courseIdx].students[studentIdx]));
+                        courseName, studentName);
+
+                free(courseName);
+                free(studentName);
+
                 return ILLEGAL_STUDENT_ID;
             }
         }
@@ -648,8 +656,15 @@ SerializationStatus GradeBook_serialize(GradeBook* gradeBook, byte* buffer) {
 
         for(byte courseIdx = 0; courseIdx < nStudentCourses; ++courseIdx) {
             if(Array_Contains(gradeBook->courses, student->courses[courseIdx].course, nCourses, sizeof(Course), &Course_compareById) == false) {
+                char* studentName = Student_toString(student);
+                char* courseName = Course_toString(student->courses[courseIdx].course);
+
                 printf("(%u) %s contains an illegal reference to %s, which does not reside in the open GradeBook\n",
-                        courseIdx, Student_toString(student), Course_toString(student->courses[courseIdx].course));
+                        courseIdx, studentName, courseName);
+
+                free(courseName);
+                free(studentName);
+
                 return ILLEGAL_COURSE_ID;
             }
         }
@@ -830,8 +845,12 @@ SerializationStatus GradeBook_deserialize(byte* serialData, GradeBook* destinati
              * Check that the student reference is valid
              */
             if(!destination->courses[courseIdx].students[studentIdx]) {
+                char* courseName = Course_toString(&destination->courses[courseIdx]);
+
                 printf("Course %s references an illegal student ID: %u at index %u \n",
-                        Course_toString(&destination->courses[courseIdx]), iCourses[courseIdx].students[studentIdx], studentIdx);
+                        courseName, iCourses[courseIdx].students[studentIdx], studentIdx);
+
+                free(courseName);
 
                 return ILLEGAL_STUDENT_ID;
             }
@@ -858,9 +877,12 @@ SerializationStatus GradeBook_deserialize(byte* serialData, GradeBook* destinati
              * Check that the course reference is valid
              */
             if(!destination->students[studentIdx].courses[courseIdx].course) {
-                printf("Student %s references an illegal course ID: %u at index %u \n",
-                        Student_toString(&destination->students[studentIdx]), iStudents[studentIdx].courses[courseIdx], courseIdx);
+                char* studentName = Student_toString(&destination->students[studentIdx]);
 
+                printf("Student %s references an illegal course ID: %u at index %u \n",
+                        studentName, iStudents[studentIdx].courses[courseIdx], courseIdx);
+
+                free(studentName);
                 return ILLEGAL_COURSE_ID;
             }
         }
