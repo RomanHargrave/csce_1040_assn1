@@ -1,4 +1,5 @@
 #include "tui.h"
+#include "debug.h"
 #include <string.h>
 #include <math.h>
 #include <stdio.h>
@@ -102,12 +103,12 @@ typedef enum E_Align {
 } Align;
 
 
-void String_alignInSpace(const char* string, size width, Align alignment, char destination[]) {
+void String_alignInSpace(const char* string, const size width, Align alignment, char destination[]) {
 
     size strLength = strlen(string);
 
     if(strlen(string) >= width) {
-        strncpy(destination, string, width);
+        strncpy(destination, string, strLength);
         return;
     }
 
@@ -115,7 +116,7 @@ void String_alignInSpace(const char* string, size width, Align alignment, char d
 
     char filler[shift];
     memset(filler, ' ', shift);
-    filler[shift] = NULL;
+    filler[shift] = 0x00;
 
 
 
@@ -146,23 +147,23 @@ void Table_printRows(FILE* stream, size nColumns, size nRows, const char* column
 
     // Populate initial column sizes
     for(size idx = 0; idx < nColumns; ++idx) {
-        columnWidth[idx] = strlen(columns[idx]) + COL_PADDING;
+        columnWidth[idx] = strlen(columns[idx]) + 1 + COL_PADDING;
     }
+
     for(size rowIdx = 0; rowIdx < nRows; ++rowIdx) {
         for(size colIdx = 0; colIdx < nColumns; ++colIdx) {
-            size length = strlen(rows[rowIdx][colIdx]) + COL_PADDING;
+            size length = strlen(rows[rowIdx][colIdx]) + 1 + COL_PADDING;
             columnWidth[colIdx] = (length > columnWidth[colIdx]) ? length : columnWidth[colIdx];
         }
     }
 
-    columnWidth[nColumns] -= COL_PADDING;
+    // Remove trailing padding from the last column
+    columnWidth[nColumns - 1] -= COL_PADDING + 1;
 
     size widthTotal = 0;
     for(size idx = 0; idx < nColumns; ++idx) {
         widthTotal += columnWidth[idx];
     }
-
-    widthTotal -= COL_PADDING;
 
     // Format header ---------------------------------------------------------------------------------------------------
 
@@ -179,6 +180,7 @@ void Table_printRows(FILE* stream, size nColumns, size nRows, const char* column
     }
 
     fputs("\n", stream);
+
 
     for(size rowIdx = 0; rowIdx < nRows; ++rowIdx) {
         for(size colIdx = 0; colIdx < nColumns; ++colIdx) {
