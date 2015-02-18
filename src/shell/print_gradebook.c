@@ -47,20 +47,9 @@ int Option_printGradeBook(int argCount, char** args) {
 
     // 2-dimensional arrays containing strings of arbitrary length
     char* courseTable[index.coursesCount][GradeBook_COURSE_COLUMN_COUNT];
-    for(byte idx = 0; idx < index.coursesCount; ++idx) {
-        courseTable[idx][0] = calloc(sizeof(char), 255);
-        courseTable[idx][1] = calloc(sizeof(char), 255);
-        courseTable[idx][2] = calloc(sizeof(char), 255);
-        courseTable[idx][3] = calloc(sizeof(char), 255);
-    }
-
     char* studentTable[index.studentsCount][GradeBook_STUDENT_COLUMN_COUNT];
-    for(byte idx = 0; idx < index.studentsCount; ++idx) {
-        studentTable[idx][0] = calloc(sizeof(char), 255);
-        studentTable[idx][1] = calloc(sizeof(char), 255);
-        studentTable[idx][2] = calloc(sizeof(char), 255);
-        studentTable[idx][3] = calloc(sizeof(char), 255);
-    }
+    Table_allocStrings(index.coursesCount, GradeBook_COURSE_COLUMN_COUNT, courseTable, 255);
+    Table_allocStrings(index.studentsCount, GradeBook_STUDENT_COLUMN_COUNT, studentTable, 255);
 
     GradeBook_courseTable(&index, courseTable);
     GradeBook_studentsTable(&index, studentTable);
@@ -75,6 +64,9 @@ int Option_printGradeBook(int argCount, char** args) {
     printf("Students: \n");
     Table_printRows(stdout, GradeBook_STUDENT_COLUMN_COUNT, index.studentsCount,
             GradeBook_STUDENT_TABLE_COLUMNS, studentTable);
+
+    Table_unallocStrings(index.coursesCount, GradeBook_COURSE_COLUMN_COUNT, courseTable);
+    Table_unallocStrings(index.studentsCount, GradeBook_STUDENT_COLUMN_COUNT, studentTable);
 
     return 0;
 }
