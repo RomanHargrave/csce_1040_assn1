@@ -1,6 +1,8 @@
+
 #include <stdint.h>
 #include <ctype.h>
 #include <string.h>
+
 #include "util.h"
 
 const byte BYTE_MIN = 0;
@@ -19,7 +21,7 @@ void String_trim(char* string) {
     memmove(string, seek, initial);
 
     for(size pos = strlen(string) - 1; isspace(string[pos]); --pos) {
-        string[pos] = NULL;
+        string[pos] = 0x00;
     }
 }
 
@@ -51,19 +53,11 @@ bool Array_Contains(const void* array, const void* subject, size nMembers, size 
 }
 
 long fsize(FILE* file) {
-    long size = 0;
-    // if the program was compiled with POSIX support/the standard library supports POSIX use fstat instead of messing
-    // with the file stream.
-    #ifdef __USE_POSIX
-        struct stat fileInfo;
-        int fd = fileno(file);
-        fstat(fd, &fileInfo);
-        size =fileInfo.st_size;
-    #else
-        long original = ftell(file);
-        fseek(file, 0, SEEK_END);
-        size = ftell(file);
-        fseek(file, original, SEEK_SET);
-    #endif
+
+    long original = ftell(file);
+    fseek(file, 0, SEEK_END);
+    long size = ftell(file);
+    fseek(file, original, SEEK_SET);
+
     return size;
 }
