@@ -8,7 +8,10 @@
 #include <string.h>
 #include <strings.h>
 #include <slcurses.h>
+#include <stdint.h>
 #include "grading.h"
+#include "debug.h"
+#include "tui.h"
 
 
 // ---- Grade Array Manipulation ---------------------------------------------------------------------------------------
@@ -89,50 +92,49 @@ bool GradeArray_remove(grade gradePtr[], size nGrades, size index) {
 
 }
 
-grade GradeArray_addNew(grade gradePtr[], size nGrades, grade newGrade) {
-
-    /*
-     * Get the grade from the pointer of greatest value
-     */
-    grade lastGrade = gradePtr[nGrades - 1];
-
-    #ifdef __USE_TRICKS
-
-    for(size idx = 0; idx < nGrades; ++idx) {
-        /*
-         * Fun order-of-operations (ab)use:
-         * Assign the value at gradePtr+1 to the value of gradePtr
-         * This happens because the expression `*gradePtr` (dereference gradePtr) is decomposed by the compiler before
-         * the value of gradePtr is incremented.
-         */
-        *++gradePtr = *gradePtr;
-    }
-
-    #else
-
-
-
-    #endif
-
-    /*
-     * Put the new grade at the pointer of least value
-     */
-    gradePtr[0] = newGrade;
-
-    return lastGrade;
-}
-
-
 // ---- Enrollment Manipulation ----------------------------------------------------------------------------------------
+
+void dongs_gradeStringifier(const void* gVal, FILE* stream) {
+    fprintf(stream, "%u", *(grade*)gVal);
+}
 
 grade Enrollment_addGrade(StudentEnrollment* enrollment, grade newGrade) {
 
+    d_printf("Add grade %u to enrollment in %u\n", newGrade, enrollment->course->courseId);
+    d_printf("gradeCount = %lu\n", enrollment->gradeCount);
+
     if(enrollment->gradeCount >= NMEMBERS(enrollment->grades, grade)) {
+        size memberCount = NMEMBERS(enrollment->grades, grade);
+
+        d_printf("Performing right-shift grade update\n");
+
         grade removed = enrollment->grades[enrollment->gradeCount -1];
-        memmove(enrollment->grades + 1, enrollment->grades, (enrollment->gradeCount - 1));
+
+        d_printf("memmove(0x%x, 0x%x, %lu)\n",
+                enrollment->grades + sizeof(grade), enrollment->grades, (memberCount - 1) * sizeof(grade));
+
+        memmove(enrollment->grades + 1, enrollment->grades, (memberCount - 1) * sizeof(grade));
+
+        enrollment->grades[0] = newGrade;
+
+#ifdef _GB_DEBUG
+
+        char* arrayStr = Array_toString(enrollment->grades, enrollment->gradeCount, sizeof(grade), ", ", &dongs_gradeStringifier);
+        if(arrayStr) {
+            d_printf("%s\n", arrayStr);
+            free(arrayStr);
+        }
+
+#endif
+
         return removed;
     } else {
+        d_printf("Performing insertion grade update\n");
+
         enrollment->grades[enrollment->gradeCount++] = newGrade;
+
+        d_printf("done. gradeCount = %lu. grades[%lu] = %u\n", enrollment->gradeCount, enrollment->gradeCount - 1, enrollment->grades[enrollment->gradeCount -1]);
+
         return 0;
     }
 }
