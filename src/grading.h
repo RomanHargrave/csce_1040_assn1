@@ -13,7 +13,6 @@
 
 // Begin Header "grading.h" --------------------------------------------------------------------------------------------
 
-
 // ---- List Applications ----------------------------------------------------------------------------------------------
 
 /*
@@ -47,11 +46,13 @@ grade GradeArray_smallest(grade[], size);
  */
 grade GradeArray_largest(grade[], size);
 
-/*
- * Shifts all contained grades +1 position
- * Value pointed to by the greatest pointer in the array will be returned, and will not be in the array any longer
- */
-grade GradeArray_addNew(grade[], size, grade);
+// ---- Enrollment Records ---------------------------------------------------------------------------------------------
+
+grade Enrollment_addGrade(StudentEnrollment* enrollment, grade newGrade);
+
+bool Enrollment_removeGrade(StudentEnrollment* enrollment, size index);
+
+float Enrollment_average(StudentEnrollment* enrollment);
 
 // End Header "grading.h" ----------------------------------------------------------------------------------------------
 

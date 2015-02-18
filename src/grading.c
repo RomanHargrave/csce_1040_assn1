@@ -6,7 +6,12 @@
  */
 
 #include <string.h>
+#include <strings.h>
+#include <slcurses.h>
 #include "grading.h"
+
+
+// ---- Grade Array Manipulation ---------------------------------------------------------------------------------------
 
 int GradeArray_sum(grade gradePtr[], size nGrades) {
     int accumulator = 0;
@@ -69,6 +74,21 @@ grade GradeArray_largest(grade gradePtr[], size nGrades) {
     return cache;
 }
 
+bool GradeArray_remove(grade gradePtr[], size nGrades, size index) {
+
+    if(index > (nGrades - 1)) return  false;
+
+    if(index == (nGrades - 1)) {
+        gradePtr[index] = 0;
+    } else {
+        gradePtr[index] = gradePtr[nGrades - 1];
+        gradePtr[nGrades - 1] = 0;
+    }
+
+    return true;
+
+}
+
 grade GradeArray_addNew(grade gradePtr[], size nGrades, grade newGrade) {
 
     /*
@@ -90,10 +110,7 @@ grade GradeArray_addNew(grade gradePtr[], size nGrades, grade newGrade) {
 
     #else
 
-    /*
-     * Copy gradePtr[0...N-1] to gradePtr[1...N-1]
-     */
-    memmove(gradePtr + 1, gradePtr, (nGrades - 1));
+
 
     #endif
 
@@ -103,4 +120,46 @@ grade GradeArray_addNew(grade gradePtr[], size nGrades, grade newGrade) {
     gradePtr[0] = newGrade;
 
     return lastGrade;
+}
+
+
+// ---- Enrollment Manipulation ----------------------------------------------------------------------------------------
+
+grade Enrollment_addGrade(StudentEnrollment* enrollment, grade newGrade) {
+
+    if(enrollment->gradeCount >= NMEMBERS(enrollment->grades, grade)) {
+        grade removed = enrollment->grades[enrollment->gradeCount -1];
+        memmove(enrollment->grades + 1, enrollment->grades, (enrollment->gradeCount - 1));
+        return removed;
+    } else {
+        enrollment->grades[enrollment->gradeCount++] = newGrade;
+        return 0;
+    }
+}
+
+bool Enrollment_removeGrade(StudentEnrollment* enrollment, size index) {
+
+    if(index >= enrollment->gradeCount || enrollment->gradeCount == 0) return false;
+
+
+    if(index == (enrollment->gradeCount - 1)) {
+        enrollment->grades[index] = 0;
+    } else {
+        // Shift left from idx + 1 by 1, overwriting idx
+        memmove(enrollment->grades + index, enrollment->grades + index + 1, enrollment->gradeCount - index - 1);
+
+        --enrollment->gradeCount;
+
+        // Zero out the tail end of the array from the first unused element to the end of the array.
+        memset(enrollment->grades + enrollment->gradeCount, 0x00,
+                sizeof(grade) * (NMEMBERS(enrollment->grades, grade) - enrollment->gradeCount));
+    }
+
+    --enrollment->gradeCount;
+
+    return true;
+}
+
+float Enrollment_average(StudentEnrollment* enrollment) {
+    return GradeArray_average(enrollment->grades, enrollment->gradeCount);
 }
