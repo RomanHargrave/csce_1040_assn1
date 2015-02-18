@@ -67,7 +67,7 @@ void Course_studentsTable(Course* course, char* table[][Course_STUDENT_COLUMNS_C
         strcpy(table[idx][1], student->studentName);
         sprintf(table[idx][2], "%3.02f", GradeArray_average(student->courses[selfIdx].grades, student->courses[selfIdx].gradeCount));
         char* gradeStr = Array_toString(student->courses[selfIdx].grades, student->courses[selfIdx].gradeCount, sizeof(grade), ", ", &gradeStringifier);
-        strcpy(table[idx][3], gradeStr);
+        strcpy(table[idx][3], gradeStr ? gradeStr : "None");
         free(gradeStr);
     }
 
