@@ -180,6 +180,7 @@ bool Course_remStudent(Course* course, Student* student) {
 const char* GradeBook_stringFormat = "GradeBook{ .courses[%02u], .students[%03u] }";
 
 char* GradeBook_toString(GradeBook* book) {
+    if(!book) return "(GradeBook)null";
     char* nameFormatted[strlen(Student_stringFormat)];
     sprintf(nameFormatted, GradeBook_stringFormat, book->coursesCount, book->studentsCount);
 
