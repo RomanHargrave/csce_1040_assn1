@@ -23,7 +23,7 @@ ShellReturn Command_courseList(char* args, GradeBook* gradeBook) {
 
 ShellReturn Command_course(char* args, GradeBook* gradeBook) {
 
-    char* action    = strtok(NULL, " ");
+    char* action    = strtok(args, " ");
     char* courseId  = strtok(NULL, " ");
 
     if(!action | !courseId) {
