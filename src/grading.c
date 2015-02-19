@@ -93,10 +93,6 @@ bool GradeArray_remove(grade gradePtr[], size nGrades, size index) {
 
 // ---- Enrollment Manipulation ----------------------------------------------------------------------------------------
 
-void dongs_gradeStringifier(const void* gVal, FILE* stream) {
-    fprintf(stream, "%u", *(grade*)gVal);
-}
-
 grade Enrollment_addGrade(StudentEnrollment* enrollment, grade newGrade) {
 
     d_printf("Add grade %u to enrollment in %u\n", newGrade, enrollment->course->courseId);
@@ -115,16 +111,6 @@ grade Enrollment_addGrade(StudentEnrollment* enrollment, grade newGrade) {
         memmove(enrollment->grades + 1, enrollment->grades, (memberCount - 1) * sizeof(grade));
 
         enrollment->grades[0] = newGrade;
-
-#ifdef _GB_DEBUG
-
-        char* arrayStr = Array_toString(enrollment->grades, enrollment->gradeCount, sizeof(grade), ", ", &dongs_gradeStringifier);
-        if(arrayStr) {
-            d_printf("%s\n", arrayStr);
-            free(arrayStr);
-        }
-
-#endif
 
         return removed;
     } else {
