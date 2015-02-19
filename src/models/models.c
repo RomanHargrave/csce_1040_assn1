@@ -10,9 +10,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <strings.h>
+#include <search.h>
 #include "models.h"
 #include "../grading.h"
 #include "../tui.h"
+#include "../debug.h"
 
 const grade MAX_GRADE = 0xFF;
 const grade MIN_GRADE = 0x00;
@@ -139,7 +141,10 @@ size Course_studentsCount(Course* course) {
 
 bool Course_addStudent(Course* course, Student* student) {
 
-    if(Course_studentsCount(course) >= NMEMBERS(course->students, Student*)) return false;
+    size nStudents = Course_studentsCount(course);
+
+    if(nStudents >= NMEMBERS(course->students, Student*)) return false;
+    if(lsearch(student, course->students, &nStudents, sizeof(Student*), &Student_compareById)) return false;
 
     course->students[Course_studentsCount(course)] = student;
 
@@ -201,8 +206,9 @@ size GradeBook_addCourse(GradeBook* book, Course course) {
 
 size GradeBook_removeCourse(GradeBook* book, Course* course) {
     // Lovely O(N)+ search oh my
+    char* cname = Course_toString(course);
     for(size idx = 0; idx < book->coursesCount; ++idx) {
-        if(&book->courses[idx] == course) {
+        if(Course_compareById(course, &book->courses[idx]) == 0) {
             return GradeBook_removeCourseIndex(book, idx);
         }
     }

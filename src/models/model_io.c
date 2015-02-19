@@ -113,7 +113,7 @@ const byte GRADEBOOK_MAGIC[4] = {0x01, 0xD5, 0xC0, 0x01};
  *
  *  The reason for not simply declaring the number of students and courses and being done with it, is that in the situation that
  *  a student or course is removed, all courses and students would have to be renumbered to fit the serialization system.
- *  A simpler solution is simply do what the C++ compiler does and destroy that course or student and put a new one in its place.
+ *  A simpler solution is simply do what the compiler does and destroy that course or student and put a new one in its place.
  */
 
 typedef struct S_IGradeBook {
