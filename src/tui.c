@@ -105,20 +105,19 @@ void String_alignInSpace(const char* string, const size width, Align alignment, 
 
     size strLength = strlen(string);
 
-    if(strlen(string) >= width) {
-        strncpy(destination, string, strLength);
+    if(strLength >= width) {
+        strncpy(destination, string, width);
+        memset(destination + width, 0x00, 1);
         return;
     }
 
     size shift = width - strLength;
 
     char filler[shift];
-    memset(filler, ' ', shift);
+    memset(filler, ' ', shift - 1);
     filler[shift] = 0x00;
 
-
-
-    sprintf(destination,"%s%s",
+    snprintf(destination, width, "%s%s",
             (alignment == RIGHT ? filler : string), (alignment == RIGHT ? string : filler));
 }
 
@@ -145,18 +144,15 @@ void Table_printRows(FILE* stream, size nColumns, size nRows, const char* column
 
     // Populate initial column sizes
     for(size idx = 0; idx < nColumns; ++idx) {
-        columnWidth[idx] = strlen(columns[idx]) + 1 + COL_PADDING;
+        columnWidth[idx] = strlen(columns[idx]) + (COL_PADDING * (idx != (nColumns - 1)));
     }
 
     for(size rowIdx = 0; rowIdx < nRows; ++rowIdx) {
         for(size colIdx = 0; colIdx < nColumns; ++colIdx) {
-            size length = strlen(rows[rowIdx][colIdx]) + 1 + COL_PADDING;
+            size length = strlen(rows[rowIdx][colIdx]) + (COL_PADDING * (colIdx != (nColumns - 1)));
             columnWidth[colIdx] = (length > columnWidth[colIdx]) ? length : columnWidth[colIdx];
         }
     }
-
-    // Remove trailing padding from the last column
-    columnWidth[nColumns - 1] -= COL_PADDING + 1;
 
     size widthTotal = 0;
     for(size idx = 0; idx < nColumns; ++idx) {
@@ -173,8 +169,8 @@ void Table_printRows(FILE* stream, size nColumns, size nRows, const char* column
 
     fputs("\n", stream);
 
-    for(size nthHyphen = 0; nthHyphen < widthTotal; ++nthHyphen) {
-        fputs("-", stream);
+    for(size idx = 0; idx < widthTotal; ++idx) {
+        fputc('-', stream);
     }
 
     fputs("\n", stream);
