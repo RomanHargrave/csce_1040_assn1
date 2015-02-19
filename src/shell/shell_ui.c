@@ -185,15 +185,15 @@ int Option_runShellUI(int argCount, char** args) {
 
     GradeBook book = {};
 
-    if(access(fileName, F_OK|W_OK|R_OK) == 0) {
-        openGradeBook(fileName, &book);
-    } else if(access(fileName, W_OK|R_OK) == 0) {
-        saveGradeBook(fileName, &book);
-    } else {
-        printf("You do not have permission to access or create the file %s\n", fileName);
-        printf("Please use a different file\n");
-        return 1;
-    }
+//    if(access(fileName, F_OK|W_OK|R_OK) == 0) {
+//        openGradeBook(fileName, &book);
+//    } else if(access(fileName, W_OK|R_OK) == 0) {
+//        saveGradeBook(fileName, &book);
+//    } else {
+//        printf("You do not have permission to access or create the file %s\n", fileName);
+//        printf("Please use a different file\n");
+//        return 1;
+//    }
 
     do {
         fflush(stdout);
