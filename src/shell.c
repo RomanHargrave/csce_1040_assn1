@@ -21,8 +21,8 @@ const char* PROGRAM_HEADER =
         "\n";
 
 
-char* stringPtr2string(const void* string) {
-    return *((char**) string);
+void stringPtr2string(const void* string, FILE* stream) {
+    fputs(*((char**) string), stream);
 }
 
 int Option_help(int argCount, char** args) {
