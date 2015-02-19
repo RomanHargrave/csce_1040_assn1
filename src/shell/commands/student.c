@@ -23,7 +23,7 @@ ShellReturn Command_studentList(char* args, GradeBook* gradeBook) {
 
 ShellReturn Command_student(char* args, GradeBook* gradeBook) {
 
-    char* action    = strtok(NULL, " ");
+    char* action    = strtok(args, " ");
     char* studentId = strtok(NULL, " ");
 
     if(!action | !studentId) {
