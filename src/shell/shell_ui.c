@@ -1,13 +1,10 @@
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>
-#include <limits.h>
 #include "commands/command.h"
 #include "options.h"
 #include "../models/model_io.h"
 #include "../tui.h"
-#include "model_display.h"
-#include "../grading.h"
 
 void openGradeBook(char* path, GradeBook* destination) {
 
@@ -21,30 +18,47 @@ void openGradeBook(char* path, GradeBook* destination) {
     GradeBook_deserialize(buffer, destination);
 }
 
-void saveGradeBook(char* path, GradeBook* source) {
+ShellReturn saveGradeBook(char* path, GradeBook* source) {
 
     const size flen = sizeOfGradeBook(source);
     byte buffer[flen];
 
-    GradeBook_serialize(source, buffer);
+    switch(GradeBook_serialize(source, buffer)) {
+        case SUCCESS:
+            break;
+        case FAILURE:
+        case SHORT_BUFFER:
+        case BAD_MAGIC:
+        case ILLEGAL_COURSE_ID:
+        case ILLEGAL_STUDENT_ID:
+            return SR_FAILURE;
+    }
 
     FILE* fptr  = fopen(path, "w");
     fwrite(buffer, sizeof(byte), flen, fptr);
     fclose(fptr);
+
+    return SR_SUCCESS;
 }
 
 const char* commandTable[][3] = {
-        {"help",        "",                     "Display this message"},
-        {"exit",        "",                     "Exit the application"},
-        {"load",        "[path]",               "Load the gradebook. If a path is specified, it will be loaded from there."},
-        {"save",        "[path]",               "Save the gradebook. If a path is specified, it will be saved there."},
-        {"index",       "",                     "List all courses and students in the GradeBook"},
-        {"courses",     "",                     "List all courses"},
-        {"course",      "show|add|rm <id>",     "show, add, or remove a course specified by <id>"},
-        {"students",    "",                     "List all students"},
-        {"student",     "show|add|rm <id>",     "show, add, or remove a student specified by <id>"},
-        {"enroll",      "add|rm <sid> <cid>",   "add/remove (enroll/disenroll) a student, <sid>, in a course <cid>"}
+        {"clear",       "",                                     "Clear the screen"},
+        {"help",        "",                                     "Display this message"},
+        {"exit",        "",                                     "Exit the application"},
+        {"load",        "[path]",                               "Load the gradebook. If a path is specified, it will be loaded from there."},
+        {"save",        "[path]",                               "Save the gradebook. If a path is specified, it will be saved there."},
+        {"index",       "",                                     "List all courses and students in the GradeBook"},
+        {"courses",     "",                                     "List all courses"},
+        {"course",      "show|add|rm <id>",                     "show, add, or remove a course specified by <id>"},
+        {"students",    "",                                     "List all students"},
+        {"student",     "show|add|rm <id>",                     "show, add, or remove a student specified by <id>"},
+        {"enroll",      "add|rm <sid> <cid>",                   "add/remove (enroll/disenroll) a student, <sid>, in a course <cid>"},
+        {"grade",       "add|rm <sid> <cid> <grade|index>",     "add/remove <grade/index> for student <sid>, in course <cid>."}
 };
+
+// <Development> Make clang STFU about the args parameter being unneeded in nullary commands
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 
 ShellReturn Command_help(char* args, GradeBook* gradeBook) {
     printf( "GradeBook CLI Help\n"
@@ -55,6 +69,12 @@ ShellReturn Command_help(char* args, GradeBook* gradeBook) {
 
     Table_printRows(stdout, 3, NMEMBERS(commandTable, commandTable[0]), (const char* []){"Command", "Options", "Description"}, commandTable);
 
+    return SR_SUCCESS;
+}
+
+ShellReturn Command_clear(char* args, GradeBook* gradeBook) {
+
+    printf("%c[2J%c[0;0H",27,27);
 
     return SR_SUCCESS;
 }
@@ -104,6 +124,8 @@ ShellReturn Command_unknown(char* args, GradeBook* gradeBook) {
     return SR_FAILURE;
 }
 
+#pragma clang diagnostic pop
+
 /*
  * External commands
  */
@@ -111,13 +133,10 @@ ShellReturn Command_unknown(char* args, GradeBook* gradeBook) {
 ShellReturn Command_courseList(char* args, GradeBook* gradeBook);
 ShellReturn Command_studentList(char* args, GradeBook* gradeBook);
 ShellReturn Command_index(char* args, GradeBook* gradeBook);
-
-
 ShellReturn Command_student(char* args, GradeBook* gradeBook);
-
 ShellReturn Command_course(char* args, GradeBook* gradeBook);
-
 ShellReturn Command_enroll(char* args, GradeBook* gradeBook);
+ShellReturn Command_grade(char* args, GradeBook* gradeBook);
 
 const struct A_CommandAssocation {
 
@@ -126,7 +145,7 @@ const struct A_CommandAssocation {
     ShellCommand command;
 
 } commands[] = {
-
+    {"clear",               &Command_clear},
     {"help",                &Command_help},
     {"exit",                &Command_exit},
     {"load",                &Command_load},
@@ -137,7 +156,7 @@ const struct A_CommandAssocation {
     {"courses",             &Command_courseList},
     {"course",              &Command_course},
     {"enroll",              &Command_enroll},
-    {"grade",               NULL}
+    {"grade",               &Command_grade}
 
 };
 
@@ -151,6 +170,8 @@ ShellCommand lookupCommand(char* command) {
 
     return &Command_unknown;
 }
+
+char* str2str(const void* str){ return *(char**)str; }
 
 int Option_runShellUI(int argCount, char** args) {
 
@@ -207,8 +228,11 @@ int Option_runShellUI(int argCount, char** args) {
                 printf("(!) ");
                 break;
             case SR_SAVE:
-                saveGradeBook(fileName, &book);
-                printf("Gradebook saved\n");
+                if(saveGradeBook(fileName, &book) == SR_SUCCESS) {
+                    printf("Gradebook saved\n");
+                } else {
+                    printf("Unable to save gradebook\n");
+                }
                 break;
             case SR_LOAD:
                 openGradeBook(fileName, &book);
@@ -220,8 +244,6 @@ int Option_runShellUI(int argCount, char** args) {
     } while(true);
 
 }
-
-char* str2str(const void* str){ return *(char**)str;}
 
 int Option_runShellCmd(int argCount, char** args) {
 
