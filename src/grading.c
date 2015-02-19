@@ -7,7 +7,6 @@
 
 #include <string.h>
 #include <strings.h>
-#include <slcurses.h>
 #include <stdint.h>
 #include "grading.h"
 #include "debug.h"
