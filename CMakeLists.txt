@@ -17,6 +17,8 @@ set(SOURCE_FILES
     src/tui.c
     src/grading.h
     src/grading.c
+    src/collections/linkedlist.h
+    src/collections/linkedlist.c
     src/shell/commands/command.h
     src/shell/commands/gradebook.c
     src/shell/commands/student.c

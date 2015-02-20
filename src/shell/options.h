@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Prototypes for command-line behaviours
+ */
+
 #ifndef _H_RUN_OPTIONS
     #define _H_RUN_OPTIONS
 

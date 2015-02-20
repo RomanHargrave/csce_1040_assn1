@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Contains the implementation for the tabler, and a function to count the number of characters in a number of b Base.
+ */
+
 #include "tui.h"
 #include "debug.h"
 #include <string.h>

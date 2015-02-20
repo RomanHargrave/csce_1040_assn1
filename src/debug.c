@@ -1,3 +1,11 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Provides d_printf, a condition printf.
+ * I do not think I need to go any further.
+ */
+
 #include <stdio.h>
 #include <stdarg.h>
 #include "debug.h"

@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ *
+ */
+
 #ifndef _H_DEBUG
     #define _H_DEBUG
     #include <stdbool.h>

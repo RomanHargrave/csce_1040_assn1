@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements the commands used when dealing with students.
+ */
+
 #include <stdlib.h>
 #include <string.h>
 #include "command.h"

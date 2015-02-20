@@ -1,5 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Provides some helpful utility functions for dealing with arrays and file pointers.
+ */
 
-#include <stdint.h>
 #include <ctype.h>
 #include <string.h>
 

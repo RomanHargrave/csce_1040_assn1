@@ -2,7 +2,7 @@ Roman Hargrave, ***REMOVED***;
 
 GradeBook.
 
-Compiler flags: -std=c99 -lm
+Compiler flags: -std=c99 -lm -D_USE_GNU_SOURCE
 
 Optionally, define -D__USE_POSIX 
 

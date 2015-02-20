@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Attempts to reproduce an error had apperaed during serializer design.
+ */
+
 #include <assert.h>
 #include <string.h>
 #include "../models/model_io.h"

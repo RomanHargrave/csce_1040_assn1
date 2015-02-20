@@ -1,5 +1,11 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements the commands used when managing student/course relationships
+ */
+
 #include <string.h>
-#include <strings.h>
 #include <stdint.h>
 #include "../../models/models.h"
 #include "command.h"

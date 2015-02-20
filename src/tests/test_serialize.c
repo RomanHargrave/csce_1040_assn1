@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Fills a gradebook file with valid data.
+ */
+
 #include "../models/model_io.h"
 
 const byte nStudents    = 100;

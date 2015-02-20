@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements the `index` command, which displays GradeBook contents.
+ */
+
 #include <stdio.h>
 #include "command.h"
 #include "../../models/models.h"

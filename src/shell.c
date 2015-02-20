@@ -1,6 +1,9 @@
 /*
- * Prompt user interface for interacting with GradeBook
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
  *
+ * Program entry point.
+ * From here the user can apply a shell command to a preexisting gradebook, or enter interactive mode.
  */
 
 #include <string.h>

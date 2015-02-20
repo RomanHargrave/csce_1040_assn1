@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements the GradeBook `dump` function used to list all models in a GradeBook file
+ */
+
 #include <stdio.h>
 #include "options.h"
 #include "../models/models.h"

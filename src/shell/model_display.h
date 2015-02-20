@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Defines useful constants and functions for displaying tabular data about models.
+ */
+
 #ifndef _H_MODEL_DISPLAY
     #define _H_MODEL_DISPLAY
     #include "../models/models.h"

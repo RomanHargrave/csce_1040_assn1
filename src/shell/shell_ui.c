@@ -1,3 +1,11 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements the `interactive` command line option.
+ * Executing this will result in an interactive shell wherein the user can work with the GradeBook.
+ */
+
 #include <stddef.h>
 #include <string.h>
 #include <unistd.h>

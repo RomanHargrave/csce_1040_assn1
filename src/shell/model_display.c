@@ -1,3 +1,10 @@
+/*
+ * Roman Hargrave, 2015.
+ * CSCE 1040, ***REMOVED***
+ *
+ * Implements helper functions to be used when formatting and displaying models.
+ */
+
 #include <string.h>
 #include "model_display.h"
 #include "../grading.h"
