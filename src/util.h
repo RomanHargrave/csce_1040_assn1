@@ -27,7 +27,8 @@
 #define F_PURE C_ATR(pure)
 #define F_CONST C_ATR(const)
 
-#define F_CONSTRUCTOR F_PURE C_ATR(returns_nonnull) C_ATR(warn_unused_result) C_ATR(malloc)
+#define F_CREATE F_PURE C_ATR(warn_unused_result)
+#define F_CONSTRUCTOR F_PURE C_ATR(returns_nonnull) C_ATR(warn_unused_result)
 #define ALL_ARGS_EXIST C_ATR(nonnull)
 #define ARGS_EXIST(args...) __attribute__((nonnull (args)))
 
