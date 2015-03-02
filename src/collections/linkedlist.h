@@ -17,41 +17,81 @@
     #define _H_LINKED_LIST_GB
     #include <stddef.h>
     #include <stdbool.h>
+#include "../util.h"
 
 typedef int (*GBLL_Comparator)(const void* a, const void* b);
 
-typedef struct S_GBLinkedNode GBLinkedNode;
-
-typedef struct S_GBLinkedNode {
-
-    GBLinkedNode* preceeding;
-
-    void* value;
-
-    GBLinkedNode* proceeding;
-
-} GBLinkedNode;
-
 typedef struct S_GBLinkedList {
 
-    GBLinkedNode* head;
+    struct S_GBLinkedList* prior;
 
-    GBLinkedNode* tail;
+    struct S_GBLinkedList* next;
 
-    GBLL_Comparator comparator;
+    void* data;
 
 } GBLinkedList;
+
+/*
+ * Handy-dandy preprocessor macro that iterates through a list and handles the boiler plate!
+ * This borders on preprocessor abuse (don't flog me!)
+ */
+#define GBLinkedList_with(head, with, lambda) {\
+    GBLinkedList* with = head;\
+    do {\
+     lambda;\
+     with = with->next;\
+    } while ( with );\
+}
+
+/*
+ * Preprocessor macro that allows you to perform a Map function with `lambda` where lambda is an expression.
+ * `x` will define the name of the variable visible inside the lambda which represents the current value.
+ *
+ * There is no question is to whether this is preprocessor abuse.
+ * It is __flagrant__ preprocessor abuse.
+ *
+ * It also uses GCC compound statements.
+ */
+#define GBLinkedList_mapWith(head, x, lambda) ({\
+    GBLinkedList* mapped = NULL;\
+    GBLinkedList_with(head, currentNode, {\
+        void* x = currentNode->data;\
+        void* yield = (void*) ( lambda );\
+        if(mapped) {\
+            mapped = GBLinkedList_prepend(mapped, yield);\
+        } else {\
+            mapped = GBLinkedList_new(yield);\
+        }\
+    });\
+    GBLinkedList_reverse(&mapped);\
+    mapped;\
+})
+
+
+/*
+ * Initialize a new GBLinkedList
+ */
+F_CONSTRUCTOR
+GBLinkedList* GBLinkedList_new(void* initialData);
+
+/*
+ * Free a GBLinkedList (note that this will not free #data)
+ */
+ARGS_EXIST(1)
+void GBLinkedList_free(GBLinkedList* list) ;
 
 /*
  * Determines the size of the list by counting the number of nodes in
  * the list
  */
+ARGS_EXIST(1)
 size_t GBLinkedList_size(GBLinkedList* list);
 
 /*
  * Inserts in to the position in the list where the comparator says that this should go
  */
-void GBLinkedList_add(GBLinkedList* list, void* ptr);
+ARGS_EXIST(1)
+GBLinkedList* GBLinkedList_append(GBLinkedList* list, void* ptr);
 
 /*
  * Counts nodes up to `index`, returning false if the chain ends before `index` is reached.
@@ -62,6 +102,7 @@ void GBLinkedList_add(GBLinkedList* list, void* ptr);
  *
  * Warning: I am O(k) where `k` is the number of nodes (!)
  */
+ARGS_EXIST(1)
 bool GBLinkedList_set(GBLinkedList* list, void* ptr, size_t index);
 
 /*
@@ -73,6 +114,7 @@ bool GBLinkedList_set(GBLinkedList* list, void* ptr, size_t index);
  *
  * Warning: I am O(k) where `k` is the number of nodes (!)
  */
+ARGS_EXIST(1)
 bool GBLinkedList_splice(GBLinkedList* list, void* ptr, size_t index);
 
 /*
@@ -84,49 +126,119 @@ bool GBLinkedList_splice(GBLinkedList* list, void* ptr, size_t index);
  *
  * Warning: I am O(k + nPtrs) where k is the number of nodes
  */
+ARGS_EXIST(1)
 bool GBLinkedList_spliceAll(GBLinkedList* list, void* ptrs[], size_t nPtrs, size_t index);
-
-/*
- * Appends `ptr` to the end of the list
- */
-void GBLinkedList_enqueue(GBLinkedList* list, void* ptr);
 
 /*
  * Puts `ptr` at the top of the list
  */
-void GBLinkedList_push(GBLinkedList* list, void* ptr);
+ARGS_EXIST(1)
+GBLinkedList* GBLinkedList_prepend(GBLinkedList* list, void* ptr);
 
 /*
  * Pop from the tail and return the value that was previously at the tail.
  * Returns NULL if the list is 0 nodes long, or that element should have a NULL value.
  */
+ALL_ARGS_EXIST
 void* GBLinkedList_eject(GBLinkedList* list);
 
 /*
  * Returns the value at the top of the list
  */
-void* GBLinkedList_peekFront(GBLinkedList* list);
+ALL_ARGS_EXIST
+void* GBLinkedList_first(GBLinkedList* list);
 
 /*
  * Returns the value at the end of the list
  */
-void* GBLinkedList_peekLast(GBLinkedList* list);
+ALL_ARGS_EXIST
+void* GBLinkedList_last(GBLinkedList* list);
 
 /*
- * Removes and returns the value at the top of the list
- * If no more values are available, NULL will be returning.
- */
-void* GBLinkedList_pop(GBLinkedList* list);
-
-/*
- * Unlink the specified node.
- * This is accomplished by unlinking this node, and linking the preceding node to
- * the proceeding node.
+ * Performs an operation on each element in the list taking two arguments:
  *
- * You probably want to use remove with the value of your node, because that will
- * free the memory allocated to the node (if any).
+ *      (x, y) => f(x,y)
+ *
+ *      where
+ *          for the first iteration
+ *              x is provided to the function call
+ *          for all other iterations
+ *              x is the result of the previous operation
+ *          y is the nth element in the list
+ *
+ *  A an example use case might be summing all values in a list:
+ *
+ *      let Sum(x, y) in
+ *          x + y
+ *
+ *      FoldRight(Sequence(1, 2, 3), 0, sum) ==
+ *
+ *          ( 0 + 1 -> 1
+ *            1 + 2 -> 3
+ *            3 + 3 -> 6 )
+ *
+ *          == 6
+ *
+ *
+ *      Essentially, this can be unwound as follows:
+ *
+ *          # Where `N` is the nth index of Sequence(1, 2, 3)
+ *
+ *          let x 0
+ *
+ *          # N = 0, x = 0
+ *          let x Sum(x, 1)
+ *
+ *          # N = 1, x = 1
+ *          let x Sum(x, 2)
+ *
+ *          # N = 2, x = 3
+ *          let x Sum(x, 3)
+ *
+ *          x = 6
+ *
+ *      Alternatively,
+ *
+ *          (sum 3
+ *              (sum 2
+ *                  (sum 1 0)))
+ *
+ *      Which simplifies to:
+ *
+ *          (sum 3 2 1)
+ *
+ *          ;; or
+ *          (sum 1 2 3)
+ *
  */
-void GBLinkedList_unlink(GBLinkedNode* node);
+ARGS_EXIST(1, 3)
+void* GBLinkedList_foldRight(GBLinkedList*, const void*, void*(*)(const void*, const void*));
+
+/*
+ * Maps the output of a function applied to element N in a list
+ *
+ * Example:
+ *
+ *      let Product(x)(y) in
+ *          x * y
+ *
+ *      Map(Sequence(1, 2, 3), Product(2)) = Sequence(2, 4, 6)
+ *
+ *  Rules:
+ *
+ *      # Where Application(x) is an arbitrary function that is both pure and deterministic
+ *      # such that Application(x) = 'x , and Inverse(Application)('x) = x are both true at any given time
+ *      let Application(x)
+ *
+ *      let a Sequence(1, 2, 3)
+ *      let b Map(a, Application)
+ *
+ *      # Where N is an arbitrary index within both `a` and `b`
+ *      Take(b, N) = Application(Take(a, N))
+ *
+ */
+ALL_ARGS_EXIST
+GBLinkedList* GBLinkedList_map(GBLinkedList*, void*(*)(const void*));
 
 /*
  * Performs the following operations:
@@ -136,34 +248,33 @@ void GBLinkedList_unlink(GBLinkedNode* node);
  *  - free(node)
  *  - Return true
  */
-bool GBLinkedList_remove(GBLinkedList* list, void* key);
+ARGS_EXIST(1, 3)
+bool GBLinkedList_remove(GBLinkedList*, const void*, GBLL_Comparator);
 
 /*
  * Counts nodes up to index and returns the value of the node at that point.
  * Will return NULL if index exceeds the number of nodes in the chain
  */
+ARGS_EXIST(1)
 void* GBLinkedList_get(GBLinkedList* list, size_t index);
 
 /*
  * Performs GBLinkedList_findNode and then returns the value of that node.
  * Returns NULL if no value is found
  */
-void* GBLinkedList_find(GBLinkedList* list, const void* key);
-
-/*
- * Traverse the list until the internal comparator returns a difference of 0 for key and node value
- * Returns the node that has a matching value, or NULL if not found.
- */
-GBLinkedNode GBLinkedList_findNode(GBLinkedList* list, const void* key);
+ARGS_EXIST(1)
+GBLinkedList* GBLinkedList_find(GBLinkedList*, const void*, GBLL_Comparator);
 
 /*
  * Sort the specified list using the internal comparator
  */
-void GBLinkedList_sort(GBLinkedList* list);
+ALL_ARGS_EXIST
+void GBLinkedList_sort(GBLinkedList**, GBLL_Comparator);
 
 /*
  * Returns true if GBLinkedList_findNode(...) exists, and (...)->value is non-NULL
  */
-bool GBLinkedList_contains(GBLinkedList* list, const void* key);
+ARGS_EXIST(1, 3)
+bool GBLinkedList_contains(GBLinkedList*, const void*, GBLL_Comparator);
 
 #endif

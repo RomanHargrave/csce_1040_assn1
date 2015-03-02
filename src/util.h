@@ -29,6 +29,11 @@
 
 #define F_CREATE F_PURE C_ATR(warn_unused_result)
 #define F_CONSTRUCTOR F_PURE C_ATR(returns_nonnull) C_ATR(warn_unused_result)
+
+#define AGG_INLINE C_ATR(flatten) inline
+#define F_WRAPPER C_ATR(artificial) AGG_INLINE
+#define F_BRIDGE C_ATR(always_inline) F_WRAPPER
+
 #define ALL_ARGS_EXIST C_ATR(nonnull)
 #define ARGS_EXIST(args...) __attribute__((nonnull (args)))
 
