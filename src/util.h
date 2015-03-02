@@ -13,7 +13,28 @@
     #include <stdio.h>
     #include <stdbool.h>
 
+#define gb_new(type) ((type*) malloc(sizeof(type)))
+#define gb_new0(type) ((type*) calloc(1, sizeof(type)))
+#define gb_free(pointer) {if(pointer) { free(pointer); }}
+
+#define unless(predicate) if (!(predicate))
 // Start Header "util" -------------------------------------------------------------------------------------------------
+
+// Compiler Stuff
+
+#define C_ATR(n) __attribute__((n))
+
+#define F_PURE C_ATR(pure)
+#define F_CONST C_ATR(const)
+
+#define F_CONSTRUCTOR F_PURE C_ATR(returns_nonnull) C_ATR(warn_unused_result) C_ATR(malloc)
+#define ALL_ARGS_EXIST C_ATR(nonnull)
+#define ARGS_EXIST(args...) __attribute__((nonnull (args)))
+
+#define F_VISIBILITY(vis) __attribute__((visibility ( #vis )))
+#define F_HIDDEN F_VISIBILITY(hidden)
+#define F_INTERNAL F_VISIBILITY(internal)
+#define F_PROTECTED F_VISIBILITY(protected)
 
 // IO Tools ------------------------------------------------------------------------------------------------------------
 
@@ -51,12 +72,14 @@ void String_trim(char* string);
  * Determine the number of non-null pointers in an array up to first null pointer
  * See implementation in util.c
  */
+ARGS_EXIST(1)
 size PtrArray_CountSane(void** array, size nMembers);
 
 /*
  * Traverse the array in a linear fashion, comparing subject and array[N] with comparator until `0` is returned
  * by the specified comparator function
  */
+ARGS_EXIST(1, 5)
 bool Array_Contains(const void* array, const void* subject, size nMembers, size memberSize, int(* comparator)(const void*, const void*));
 
 // End Header "util" ---------------------------------------------------------------------------------------------------
