@@ -269,7 +269,7 @@ GBLinkedList* GBLinkedList_find(GBLinkedList*, const void*, GBLL_Comparator);
  * Sort the specified list using the internal comparator
  */
 ALL_ARGS_EXIST
-void GBLinkedList_sort(GBLinkedList**, GBLL_Comparator);
+GBLinkedList* GBLinkedList_sort(GBLinkedList*, GBLL_Comparator);
 
 /*
  * Returns true if GBLinkedList_findNode(...) exists, and (...)->value is non-NULL

@@ -4,7 +4,10 @@ project(homework_01)
 add_definitions(-D_GNU_SOURCE)
 
 # Uncomment for debug output!
-add_definitions(-D_GB_DEBUG)
+add_definitions(
+        -D_GB_DEBUG
+        -D_GB_DEBUG_URGENT
+        )
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lm")
 
@@ -36,4 +39,6 @@ set(SOURCE_FILES
 
 add_executable(test_manip ${SOURCE_FILES} src/tests/test_manipulation.c)
 add_executable(test_serialize ${SOURCE_FILES} src/tests/test_serialize.c)
+add_executable(test_list ${SOURCE_FILES} src/tests/lltest.c)
 add_executable(gradebook ${SOURCE_FILES} src/shell.c)
+

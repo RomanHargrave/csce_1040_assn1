@@ -18,11 +18,11 @@ const bool GB_DEBUG = false;
 
 void d_printf(const char* format, ...) {
 
-    if(!GB_DEBUG) return;
+    unless(GB_DEBUG) return;
 
     va_list arguments;
 
-    printf("[D] ");
+//    printf("[D] ");
 
     va_start(arguments, format);
 
@@ -30,4 +30,9 @@ void d_printf(const char* format, ...) {
 
     va_end(arguments);
 
+    // d_printf should really insure that it gets to console before an error occurs
+    #ifdef _GB_DEBUG_URGENT
+    fflush(stdout);
+    #endif
 }
+

@@ -23,6 +23,7 @@
 // Compiler Stuff
 
 #define C_ATR(n) __attribute__((n))
+#define C_ATR_A(n, args...) __attribute__((n ( args )))
 
 #define F_PURE C_ATR(pure)
 #define F_CONST C_ATR(const)
@@ -41,6 +42,8 @@
 #define F_HIDDEN F_VISIBILITY(hidden)
 #define F_INTERNAL F_VISIBILITY(internal)
 #define F_PROTECTED F_VISIBILITY(protected)
+
+#define F_COMPARATOR F_CONST C_ATR(noinline)
 
 // IO Tools ------------------------------------------------------------------------------------------------------------
 

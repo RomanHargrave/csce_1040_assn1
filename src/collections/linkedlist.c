@@ -1,7 +1,8 @@
 #include <stddef.h>
 #include <stdbool.h>
-#include <jpegint.h>
+#include <assert.h>
 #include "linkedlist.h"
+#include "../debug.h"
 
 GBLinkedList* GBLinkedList_new(void* initialData) {
 
@@ -32,6 +33,8 @@ void GBLinkedList_free(GBLinkedList* list) {
 }
 
 size_t GBLinkedList_size(GBLinkedList* list) {
+
+    d_printf("%s(0x%X)\n", __FUNCTION__, list);
 
     size_t listSize = 0;
 
@@ -252,79 +255,103 @@ GBLinkedList* GBLinkedList_map(GBLinkedList* list, void* (* lambda)(const void*)
     return GBLinkedList_mapWith(list, x, lambda(x));
 }
 
-F_INTERNAL F_CONST
-GBLinkedList* copyList(const GBLinkedList* list) {
-
-    GBLinkedList* newList = GBLinkedList_new(list->data);
-
-    GBLinkedList* current = list->next;
-    while (current) {
-
-        newList = GBLinkedList_prepend(newList, current->data);
-
-        current = current->next;
-    }
-
-    GBLinkedList_reverse(&newList);
-
-    return newList;
-}
-
 // Sort Logic & Helpers -------------------------------------------------------------------------
 
-F_INTERNAL F_CONST F_WRAPPER ARGS_EXIST(1)
-GBLinkedList* prependOrAssignToHead(GBLinkedList* list, void* value) {
-    if (list->data) {
-        return GBLinkedList_prepend(list, value);
+
+#define printList(list) {\
+if(list){\
+    d_printf("{ ");\
+    GBLinkedList_with(list, node, {\
+        if(node->data) d_printf("%i", *((int*)node->data));\
+        else d_printf("(nil)");\
+        if(node->next) d_printf(", ");\
+    });\
+    d_printf(" }");\
+} else {\
+    d_printf("nil");\
+}\
+}
+
+F_INTERNAL ALL_ARGS_EXIST
+GBLinkedList* sort_Tail(GBLinkedList* head) {
+    if(head->next) {
+        return sort_Tail(head->next);
     } else {
-        list->data = value;
-        return list;
+        return head;
     }
 }
 
-F_INTERNAL F_WRAPPER ALL_ARGS_EXIST
+F_INTERNAL ALL_ARGS_EXIST
 void sort_AppendAll(GBLinkedList* appendTo, GBLinkedList* appendFrom) {
+
+    d_printf("- %s(", __FUNCTION__);
+    printList(appendTo);
+    d_printf(", ");
+    printList(appendFrom);
+    d_printf(") = ");
 
     GBLinkedList* current = appendFrom;
 
-    GBLinkedList* tail = appendTo;
+    GBLinkedList* tail = sort_Tail(appendTo);
+    tail->next = GBLinkedList_new(NULL);
+    tail = tail->next;
+
     GBLinkedList* last = NULL;
 
     do {
         tail->data = current->data;
 
-        if(last) tail->prior = last;
+        if (last) tail->prior = last;
 
         current = current->next;
 
-        if(current) {
+        if (current) {
             last = tail;
             tail = GBLinkedList_new(NULL);
             last->next = tail;
         }
     } while (current);
+
+    printList(appendTo);
+    d_printf("\n");
 }
 
-F_INTERNAL F_CONST ALL_ARGS_EXIST
+F_INTERNAL ALL_ARGS_EXIST
 GBLinkedList* sort_MergeLists(GBLinkedList* a, GBLinkedList* b, GBLL_Comparator comparator) {
+
+    d_printf("- %s(", __FUNCTION__);
+    printList(a);
+    d_printf(", ");
+    printList(b);
+    d_printf(")\n");
 
     GBLinkedList* result = GBLinkedList_new(NULL);
 
     GBLinkedList* tail = result;
     GBLinkedList* last = NULL;
 
-    while ((a->next) && (b->next)) {
+    d_printf("- smart merge comparator\n");
 
-        if (comparator(a->data, b->data) <= 0) {
+    do {
+
+        int diff = comparator(a->data, b->data);
+
+        d_printf("-- dif(%i, %i) = %i\n",
+                    *((int*) a->data), *((int*) b->data),
+                    diff);
+
+        if (diff <= 0) {
+            d_printf("--- result << %i {left} \n", *((int*) a->data));
             tail->data = a->data;
-            if (a->next) a = a->next;
+            a = a->next;
         } else {
+            d_printf("--- result << %i {right} \n", *((int*) b->data));
             tail->data = b->data;
-            if (b->next) b = b->next;
+            b = b->next;
         }
 
         // Only prepare for the next append operation if there is more data
-        if ((a->next) && (b->next)) {
+        if (a && b) {
 
             // assign last processed as tail
             last = tail;
@@ -338,25 +365,37 @@ GBLinkedList* sort_MergeLists(GBLinkedList* a, GBLinkedList* b, GBLL_Comparator 
             // Set the previous element of the new tail as being the previous tail
             tail->prior = last;
         }
-    }
+    } while (a && b);
 
     // If one of the lists was longer than the other, append the remainder to the result list
-    if(a->next) {
+    if (a) {
+        d_printf("- merge all rest a\n");
         sort_AppendAll(result, a);
     }
 
-    if(b->next) {
+    if (b) {
+        d_printf("- merge all rest b\n");
         sort_AppendAll(result, b);
     }
+
+    d_printf("- result = ");
+    GBLinkedList_with(result, node, {
+        d_printf("%i, ", *((int*) node->data));
+    });
+    d_printf("\n");
 
     return result;
 }
 
-void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
+GBLinkedList* GBLinkedList_sort(GBLinkedList* list, GBLL_Comparator comparator) {
 
-    size_t length = GBLinkedList_size(*list);
+    d_printf("\n\n\n%s\n", __FUNCTION__);
 
-    unless(length > 1) return;
+    size_t length = GBLinkedList_size(list);
+
+    d_printf("size(*list) = %lu\n", length);
+
+    unless(length > 1) return list;
 
     GBLinkedList* left = GBLinkedList_new(NULL);
     GBLinkedList* right = GBLinkedList_new(NULL);
@@ -364,17 +403,30 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
     GBLinkedList* result;
 
     size_t pivot = length / 2;
-    GBLinkedList* current = *list;
+    GBLinkedList* current = list;
+
+    d_printf("pivot = %lu\n", pivot);
 
     // Populate left division
     {
         GBLinkedList* tail = left;
         GBLinkedList* last = NULL;
-        for (size_t idx = 0; idx < (pivot - 1); ++idx) {
+        size_t idx = 0;
+
+        do {
 
             // Set the value of the current node in the builder chain to that
             // of the current list node
             tail->data = current->data;
+
+            d_printf("-- {left} result << %i \n", ({
+                int res = -1;
+                if (current->data) {
+                    res = *((int*) current->data);
+                }
+                assert(res >= 0);
+                res;
+            }));
 
             // If there was a builder node before this, set this nodes prior reference to that
             if (last) tail->prior = last;
@@ -383,7 +435,9 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
             current = current->next;
 
             // Avoid performing these operations if the final element in left is being appended
-            if (idx < (pivot - 2)) {
+            if (pivot > 1 && (idx < (pivot - 2))) {
+
+                d_printf("--- append tail \n");
 
                 // Create the next node
                 tail->next = GBLinkedList_new(NULL);
@@ -395,7 +449,14 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
                 tail = last->next;
 
             }
-        }
+
+            ++idx;
+
+        } while (idx < (pivot - 1));
+
+        d_printf("- {left} = ");
+        printList(left);
+        d_printf("\n");
     }
 
     // Populate right division
@@ -403,8 +464,16 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
         GBLinkedList* tail = right;
         GBLinkedList* last = NULL;
         do {
-
             tail->data = current->data;
+
+            d_printf("-- {right} result << %i \n", ({
+                int res = -1;
+                if (current->data) {
+                    res = *((int*) current->data);
+                }
+                assert(res >= 0);
+                res;
+            }));
 
             if (last) tail->prior = last;
 
@@ -419,12 +488,24 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
             }
 
         } while (current);
+
+        d_printf("- {right} = ");
+        printList(right);
+        d_printf("\n");
     }
 
+    size_t leftSize = GBLinkedList_size(left);
+    size_t rightSize = GBLinkedList_size(right);
 
     // Recursive sort down to minimum
-    GBLinkedList_sort(&left, comparator);
-    GBLinkedList_sort(&right, comparator);
+    left = GBLinkedList_sort(left, comparator);
+    d_printf("- {left[%lu]} child sort returned ", leftSize);
+    printList(left);
+    d_printf("\n");
+    right = GBLinkedList_sort(right, comparator);
+    d_printf("- {right[%lu]} child sort returned ", rightSize);
+    printList(right);
+    d_printf("\n");
 
     bool invertMerge = (comparator(left->data, right->data) <= 0);
 
@@ -439,11 +520,8 @@ void GBLinkedList_sort(GBLinkedList** list, GBLL_Comparator comparator) {
     GBLinkedList_free(left);
     GBLinkedList_free(right);
 
-    // Free old list
-    GBLinkedList_free(*list);
-
     // Assign old list head pointer to new list head pointer
-    *list = result;
+    return result;
 }
 
 bool GBLinkedList_contains(GBLinkedList* list, const void* key, GBLL_Comparator comparator) {

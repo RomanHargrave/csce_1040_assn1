@@ -6,8 +6,11 @@
  */
 
 #ifndef _H_DEBUG
-    #define _H_DEBUG
+#define _H_DEBUG
+    #include <stdio.h>
+    #include <stdarg.h>
     #include <stdbool.h>
+    #include "util.h"
 
 extern const bool GB_DEBUG;
 
