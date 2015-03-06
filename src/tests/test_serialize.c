@@ -6,12 +6,15 @@
  */
 
 #include "../models/model_io.h"
+#include "../debug.h"
 
 const byte nStudents    = 100;
 const byte nCourses     = 25;
 const char* fileName    = "serial_gradebook.gb";
 
 int main() {
+
+    trace_enable();
 
     setbuf(stdout, NULL);
 

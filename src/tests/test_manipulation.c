@@ -10,6 +10,7 @@
 #include "../models/model_io.h"
 #include "../shell/model_display.h"
 #include "../tui.h"
+#include "../debug.h"
 
 const byte nStudents    = 18;
 const byte nCourses     = 3;
@@ -42,6 +43,8 @@ SerializationStatus t_saveGradeBook(char* path, GradeBook* source) {
 }
 
 int main() {
+
+    trace_enable();
 
     setbuf(stdout, NULL);
 
