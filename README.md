@@ -15,3 +15,7 @@ License
 
 This is WTFPL licensed, unless otherwise stated.
 
+# LICENSE EXCEPTIONS
+
+* [linkedlist.c](src/collections/linkedlist.c) and [linkedlist.h](src/collections/linkedlist.h) are [Apache 2.0](http://www.apache.org/licenses/LICENSE-2.0)
+
