@@ -107,7 +107,7 @@ typedef enum E_Align {
 
 } Align;
 
-F_INTERNAL
+$Internal
 void String_alignInSpace(const char* string, const size width, Align alignment, char destination[]) {
 
     size strLength = strlen(string);

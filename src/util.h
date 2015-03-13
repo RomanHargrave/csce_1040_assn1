@@ -12,6 +12,7 @@
     #include <stdlib.h>
     #include <stdio.h>
     #include <stdbool.h>
+    #include <time.h>
 
 #define gb_new(type) ((type*) malloc(sizeof(type)))
 #define gb_new0(type) ((type*) calloc(1, sizeof(type)))
@@ -20,30 +21,52 @@
 #define unless(predicate) if (!(predicate))
 // Start Header "util" -------------------------------------------------------------------------------------------------
 
-// Compiler Stuff
+// Compiler Golf -------------------------------------------------------
 
-#define C_ATR(n) __attribute__((n))
-#define C_ATR_A(n, args...) __attribute__((n ( args )))
+/*
+ * Attribute DRY macro
+ * Saves a lot of typing
+ */
+#define gb_$(n, args...) __attribute__((n ( args )))
 
-#define F_PURE C_ATR(pure)
-#define F_CONST C_ATR(const)
+#define $PureFunction gb_$(pure)
+#define $ConstFunction gb_$(const)
 
-#define F_CREATE F_PURE C_ATR(warn_unused_result)
-#define F_CONSTRUCTOR F_PURE C_ATR(returns_nonnull) C_ATR(warn_unused_result)
+#define $Factory $PureFunction gb_$(warn_unused_result)
+#define $Allocator $PureFunction gb_$(returns_nonnull) gb_$(warn_unused_result)
 
-#define AGG_INLINE C_ATR(flatten) inline
-#define F_WRAPPER C_ATR(artificial) AGG_INLINE
-#define F_BRIDGE C_ATR(always_inline) F_WRAPPER
+#ifdef _GB_DO_INLINING
+    #define $InlineAggressive gb_$(flatten) gb_$(always_inline) inline
+    #define $WrapperFunction gb_$(artificial) $InlineAggressive
+#else
+    #define $InlineAggressive
+    #define $WrapperFunction
 
-#define ALL_ARGS_EXIST C_ATR(nonnull)
-#define ARGS_EXIST(args...) __attribute__((nonnull (args)))
+#endif
 
-#define F_VISIBILITY(vis) __attribute__((visibility ( #vis )))
-#define F_HIDDEN F_VISIBILITY(hidden)
-#define F_INTERNAL F_VISIBILITY(internal)
-#define F_PROTECTED F_VISIBILITY(protected)
+#define $NotNull(args...) gb_$(nonnull, args)
 
-#define F_COMPARATOR F_CONST C_ATR(noinline)
+#define $Vis(vis) gb_$(visibility, #vis)
+#define $Hidden $Vis(hidden)
+#define $Internal $Vis(internal)
+#define $Protected $Vis(protected)
+
+#define $Optimize(n...) gb_$(optimize, n)
+
+#define $NoProfiler gb_$(no_instrument_function)
+
+#define $Weak gb_$(weak)
+#define $AliasOf(name) gb(alias, #name)
+
+#define $Comparator $ConstFunction gb_$(noinline)
+
+// Time Tools -----------------------------------------
+
+#define GB_Time(operation) ({\
+    const register clock_t start = clock();\
+    (operation);\
+    clock() - start;\
+})
 
 // IO Tools ------------------------------------------------------------------------------------------------------------
 
@@ -81,14 +104,14 @@ void String_trim(char* string);
  * Determine the number of non-null pointers in an array up to first null pointer
  * See implementation in util.c
  */
-ARGS_EXIST(1)
+$NotNull(1)
 size PtrArray_CountSane(void** array, size nMembers);
 
 /*
  * Traverse the array in a linear fashion, comparing subject and array[N] with comparator until `0` is returned
  * by the specified comparator function
  */
-ARGS_EXIST(1, 5)
+$NotNull(1, 5)
 bool Array_Contains(const void* array, const void* subject, size nMembers, size memberSize, int(* comparator)(const void*, const void*));
 
 // End Header "util" ---------------------------------------------------------------------------------------------------
