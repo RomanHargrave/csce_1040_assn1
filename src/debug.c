@@ -25,7 +25,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 static bool do_trace = false;
-static int trace_depth = 0;
+static unsigned int trace_depth = 0;
 
 void trace_enable() {
     do_trace = true;
@@ -37,19 +37,20 @@ void trace_disable() {
 
 void trace_root() {
     trace_depth = 0;
-}
 
-#ifdef _GB_DEBUG
+}
 
 $NoProfiler
 static inline void _p_trace_inset() {
 
-    printf("x%-4d ", trace_depth);
+    printf("x%-5u ", trace_depth);
 
     register int d = 0;
     for (d; d < trace_depth && d < 25; ++d) printf(" │ ");
 
 }
+
+#ifdef _GB_DEBUG
 
 $NoProfiler
 static inline char* _sym_name(void* handle) {
@@ -100,6 +101,9 @@ void d_printf(const char* format, ...) {
     unless(GB_DEBUG) return;
 
     va_list arguments;
+
+    _p_trace_inset();
+    printf("╳   ");
 
     va_start(arguments, format);
 
