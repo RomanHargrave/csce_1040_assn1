@@ -1,96 +1,490 @@
 #include <stddef.h>
 #include <stdbool.h>
-#include <assert.h>
-#include "linkedlist.h"
 #include "../debug.h"
 
-GBLinkedList* GBLinkedList_new(void* initialData) {
+#include "linkedlist.h"
 
-    GBLinkedList* listHead = gb_new0(GBLinkedList);
+#define lreal(list) ((GBListReal*)list)
+#define ireal(iter) ((GBIteratorReal*)iter)
 
-    if (initialData) {
-        listHead->data = initialData;
-    }
+// Internal List Data Structures ---------------------------------------------------------------------------------------
 
-    return listHead;
+/*
+ * A node in a list.
+ * On their own, nodes form the entire list.
+ * This is referred to throughout the code in this file as a `chain'
+ */
+typedef struct S_GBList_Node {
+
+    struct S_GBList_Node* prior;
+
+    struct S_GBList_Node* next;
+
+    void* data;
+
+} Node;
+
+/*
+ * Real list broker.
+ * This model exists for each list.
+ * It holds a size, which is updated by each function which modifies the number of links. The size is available in client code
+ * It also holds references to both the head and tail, allowing for O(1) prepend, append, eject, and pop.
+ *
+ * Due to C's memory model, it can be cast to GBList, which will work because GBList's only element, size, is in the same
+ * place as cachedSize, and is also of the same type. This is used to the advantage of the list library, because it makes
+ * corrupting the node order from client code impossible without intentionally doing so.
+ */
+typedef struct S_GBList_Real {
+
+    size_t size;
+
+    Node* head;
+
+    Node* tail;
+
+} GBListReal;
+
+/*
+ * Real Iterator.
+ * Created by GBList_iterator and destroyed by GBIterator_destroy.
+ *
+ * It holds a void pointer that represents the data in the current node, and which is available to client code.
+ *
+ * In the internal implementation, it holds a pointer to the last node passed over, and the next node.
+ * By default, it is meant to do forward iteration, but can be initialized for backward iteration using GBList_tailIterator
+ * or for circular iteration using GBList_loopIterator.
+ */
+typedef struct S_GBList_Iterator_Real {
+
+    void* data;
+
+    Node* prior;
+    Node* next;
+
+} GBIteratorReal;
+
+// Internal helpers ----------------------------------------------------------------------------------------------------
+
+// -- Node Helpers -----------------------------------------------------------------------------------------------------
+
+/*
+ * Recursively traverse to the last node in a chain
+ */
+$Internal $NotNull()
+Node* Node_tail(Node* head) {
+    unless(head) return NULL;
+    unless(head->next) return head;
+    return Node_tail(head->next);
 }
 
-void GBLinkedList_free(GBLinkedList* list) {
-
-    // Traverse to the end of the list, freeing each node
-    GBLinkedList* currentNode = list;
-    do {
-        GBLinkedList* nextNode = currentNode->next;
-        gb_free(currentNode);
-        currentNode = nextNode;
-    } while (currentNode);
-
-    GBLinkedList_with(list, current, {
-
-    });
-
-    gb_free(currentNode);
+$Internal $NotNull() $Optimize(2)
+Node* Node_head(Node* tail) {
+    unless(tail) return NULL;
+    unless(tail->prior) return tail;
+    return Node_head(tail->prior);
 }
 
-size_t GBLinkedList_size(GBLinkedList* list) {
-
-    d_printf("%s(0x%X)\n", __FUNCTION__, list);
-
-    size_t listSize = 0;
-
-    // Traverse list to the end in order to count nodes
-    for (GBLinkedList* current = list; current; current = current->next) ++listSize;
-
-    return listSize;
+$Internal $Optimize(2)
+size_t Node_countLinks(Node* head) {
+    unless(head) return 0;
+    return 1 + Node_countLinks(head->next);
 }
 
-static GBLinkedList* GBLinkedList_tail(GBLinkedList* list) {
-
-    for (GBLinkedList* tail = list; tail; tail = tail->next) if (!tail->next) return tail;
-
-    // This should not be reachable
-    return list;
+$Internal $WrapperFunction
+bool Node_eq(Node* a, Node* b) {
+    return (a->prior == b->prior)
+           && (a->data == b->data)
+           && (a->next == b->next);
 }
 
-static GBLinkedList* GBLinkedList_nth(GBLinkedList* list, const size_t position) {
+// -- List Helpers -----------------------------------------------------------------------------------------------------
 
-    GBLinkedList* current = list;
-    for (size_t index = 0; index < position; ++index) {
-        unless(current->next) return NULL;
-        current = current->next;
+/*
+ * Traverse to the Ith node in a given GBListReal.
+ * In attempt to optimize traversal time (such that it may be O(N/2) as opposed to O(N)),
+ * the center of the list, P, will be calculated by calculating half of size, and determining weather
+ *  I lies before or after that pivot.
+ * If I lies before the pivot, the node chain will be traversed from the first element in the chain until I is reached
+ * If I lies after the pivot, the node chain will be traversed backwards from the last element in the chain until
+ *  I is reached.
+ *
+ *
+ *  If  I = P then backward reversal will be the default mode of traversal.
+ */
+$Internal $NotNull()
+Node* List_nthNode(GBListReal* list, size_t index) {
+
+    if (list->size < 2) return list->head;
+    if (index > list->size) return NULL;
+
+    size_t pivot = list->size / 2;
+
+    /*
+     * If index is after the pivot value, traverse up, otherwise down
+     */
+    Node* current = NULL;
+    if (index >= pivot) {
+        current = list->tail;
+        for (size_t idx = list->size - 1;
+             idx > index; --idx) {
+            current = current->prior;
+        }
+    } else {
+        current = list->head;
+        for (size_t idx = 0; idx < index; ++idx) current = current->next;
     }
 
     return current;
 }
 
-GBLinkedList* GBLinkedList_append(GBLinkedList* list, void* ptr) {
+$Internal $WrapperFunction
+void List_onListUpdate(GBListReal* list) {
+    d_printf("onListUpdate\n");
+    if (!list->head && list->tail) {
+        d_printf("fix head\n");
+        list->head = Node_head(list->tail);
+    } else if (!list->tail && list->head) {
+        d_printf("fix tail\n");
+        list->tail = Node_tail(list->head);
+    } else if (!list->head && !list->head) {
+        d_printf("bob list\n");
+        list->size = 0;
+    }
 
-    GBLinkedList* tail = GBLinkedList_tail(list);
-    tail->next = GBLinkedList_new(ptr);
-
-    return tail->next;
+    if (list->size < 1 && list->head) {
+        d_printf("fix size\n");
+        list->size = Node_countLinks(list->head);
+    }
 }
 
-
-void GBLinkedList_reverse(GBLinkedList** list) {
-
-    GBLinkedList* current = *list;
-    GBLinkedList* swap;
-
-    do {
-        swap = current->prior;
-        current->prior = current->next;
-        current->next = swap;
-        current = current->prior;
-    } while (current);
-
-    if (swap) *list = swap->prior;
+/*
+ * Allocated a new Node
+ */
+$Internal $Allocator $WrapperFunction $NoProfiler
+Node* Node_allocate(void* data) {
+    Node* node = gb_new(Node);
+    node->data = data;
+    return node;
 }
 
+/*
+ * Perform necessary procedures to dispose of a node
+ */
+$Internal
+void Node_destroy(Node* node) {
+    gb_free(node);
+}
 
-bool GBLinkedList_set(GBLinkedList* list, void* ptr, size_t index) {
+$Internal $Optimize(2)
+void Node_destroyChain(Node* head) {
 
-    GBLinkedList* targetNode = GBLinkedList_nth(list, index);
+    unless(head) return;
+
+    Node* next = head->next;
+
+    head->next = NULL;
+    head->prior = NULL;
+    Node_destroy(head);
+
+    Node_destroyChain(next);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+// -- Iterator API -----------------------------------------------------------------------------------------------------
+
+// ---- Iterator Management --------------------------------------------------------------------------------------------
+
+$NoProfiler
+GBIterator* GBList_iterator(GBList* list) {
+    unless(list->size > 0) return NULL;
+
+    GBIteratorReal* iterator = gb_new(GBIteratorReal);
+
+    iterator->data = NULL;
+    iterator->next = lreal(list)->head;
+
+    return (GBIterator*) iterator;
+}
+
+$NoProfiler
+GBIterator* GBList_tailIterator(GBList* list) {
+    unless(list->size > 0) return NULL;
+
+    GBIteratorReal* iterator = gb_new(GBIteratorReal);
+
+    iterator->data = NULL;
+    iterator->prior = lreal(list)->tail;
+
+    return (GBIterator*) iterator;
+}
+
+$NoProfiler
+GBIterator* GBList_loopIterator(GBList* list) {
+    GBIteratorReal* iterator = ireal(GBList_iterator(list));
+    unless(iterator) return NULL;
+
+    iterator->prior = lreal(list)->tail;
+
+    return (GBIterator*) iterator;
+}
+
+$NoProfiler
+void GBIterator_destroy(GBIterator* iterator) {
+    gb_free(ireal(iterator));
+}
+
+// ---- Iterator Access ------------------------------------------------------------------------------------------------
+
+$WrapperFunction $NoProfiler
+bool GBIterator_hasNext(GBIterator* iterator) {
+    d_printf("GBIterator_hasNext() => iterator->next = %p\n", ireal(iterator)->next);
+    return ireal(iterator)->next != NULL;
+}
+
+$NoProfiler
+void* GBIterator_next(GBIterator* iterator) {
+    unless(GBIterator_hasNext(iterator)) return NULL;
+
+    GBIteratorReal* real = ireal(iterator);
+
+    real->data = real->next->data;
+
+    Node* next = real->next->next;
+    real->prior = real->next;
+    real->next = next;
+
+    return real->data;
+}
+
+$NoProfiler
+bool GBIterator_hasPrior(GBIterator* iterator) {
+    return ireal(iterator)->prior != NULL;
+}
+
+$NoProfiler
+void* GBIterator_prior(GBIterator* iterator) {
+    unless(GBIterator_hasPrior(iterator)) return NULL;
+
+    GBIteratorReal* real = ireal(iterator);
+
+    real->data = real->prior->data;
+
+    Node* next = real->prior->prior;
+    real->next = real->prior;
+    real->prior = next;
+
+    return real->data;
+}
+
+// -- List API ---------------------------------------------------------------------------------------------------------
+
+// ---- Constructors / Factories ---------------------------------------------------------------------------------------
+
+GBList* GBList_new() {
+
+    GBListReal* listBroker = gb_new(GBListReal);
+    listBroker->head = NULL;
+    listBroker->tail = NULL;
+    listBroker->size = 0;
+
+    return (GBList*) listBroker;
+}
+
+$WrapperFunction
+GBList* GBList_new_with(void* initialData) {
+    GBList* list = GBList_new();
+    GBList_append(list, initialData);
+    return list;
+}
+
+// ---- Destructors ----------------------------------------------------------------------------------------------------
+
+void GBList_free(GBList* list) {
+    Node_destroyChain(lreal(list)->head);
+    gb_free(lreal(list));
+}
+
+// ---- List Inspection ------------------------------------------------------------------------------------------------
+
+$WrapperFunction
+GBListSize GBList_size(GBList* list) {
+    return list->size;
+}
+
+$WrapperFunction
+void* GBList_first(GBList* list) {
+    unless(lreal(list)->head) return NULL;
+    return ((GBListReal*) list)->head->data;
+}
+
+$WrapperFunction
+void* GBList_last(GBList* list) {
+    unless(lreal(list)->tail) return NULL;
+    return ((GBListReal*) list)->tail->data;
+}
+
+$WrapperFunction
+void* GBList_get(GBList* list, size_t index) {
+    Node* node = List_nthNode(lreal(list), index);
+    unless(node) return NULL;
+    return node->data;
+}
+
+GBList* GBList_find(GBList* list, const void* key, GBLL_Comparator comparator) {
+
+    GBList* found = GBList_new();
+
+    GBList_with(list, current, {
+        if (comparator(key, current) == 0) GBList_append(found, current);
+    });
+
+    return found;
+}
+
+bool GBList_contains(GBList* list, const void* key, GBLL_Comparator comparator) {
+
+    bool wasFound = false;
+
+    GBList_with(list, value, {
+        if (comparator(key, value) == 0) {
+            wasFound = true;
+            break;
+        }
+    })
+
+    return wasFound;
+}
+
+// ---- List Manipulation ----------------------------------------------------------------------------------------------
+
+// ------ Addition / Insertion -----------------------------------------------------------------------------------------
+
+void GBList_prepend(GBList* list, void* ptr) {
+
+    // [H]=[]=[T]
+    GBListReal* real = lreal(list);
+
+    // [] [H]=[]=[T]
+    Node* newHead = Node_allocate(ptr);
+
+    // []-[H]=[]=[T]
+    newHead->next = real->head;
+
+    // []=[H]=[]=[T]
+    if (real->head) real->head->prior = newHead;
+
+    // [H]=[]=[]=[T]
+    real->head = newHead;
+    unless(real->tail) real->tail = real->head;
+
+    ++real->size;
+}
+
+void GBList_append(GBList* list, void* ptr) {
+
+    d_printf("append ");
+
+    // [H]=[]=[T]
+    GBListReal* real = lreal(list);
+
+    printf("(%p) ", real);
+
+    // [H]=[]=[T] []
+    Node* newTail = Node_allocate(ptr);
+
+    printf("new tail %p , ", newTail);
+
+    // [H]=[]=[T]-[]
+    newTail->prior = real->tail;
+
+    printf("prior %p", real->tail);
+
+    // [H]=[]=[T]=[]
+    if (real->tail) {
+        printf(", old tail (%p) -> next = %p", real->tail, newTail);
+        real->tail->next = newTail;
+    }
+
+    // [H]=[]=[]=[T]
+    real->tail = newTail;
+    unless(real->head) {
+        printf(", fix head (%p) = %p", real->head, real->tail);
+        real->head = real->tail;
+    }
+
+    printf("\n");
+
+    ++real->size;
+}
+
+bool GBList_insertBefore(GBList* list, void* ptr, size_t index) {
+
+    GBListReal* real = lreal(list);
+    Node* at = List_nthNode(real, index);
+
+    unless(at) return false;
+
+    if (at == real->head) {
+        GBList_prepend(list, ptr);
+    } else {
+
+        Node* new = Node_allocate(ptr);
+
+        // [1]=[2]=[3]
+        Node* oldPrior = at->prior;
+
+        // [1] [4]=[2]=[3]
+        at->prior = new;
+        new->next = at;
+
+        // [1]=[4]=[2]=[3]
+        if (oldPrior) {
+            new->prior = oldPrior;
+            oldPrior->next = new;
+        }
+
+        ++real->size;
+    }
+
+    return true;
+}
+
+bool GBList_insertAfter(GBList* list, void* ptr, size_t index) {
+
+    GBListReal* real = lreal(list);
+    Node* at = List_nthNode(real, index);
+
+    unless(at) return false;
+
+    if (at == real->tail) {
+        GBList_append(list, ptr);
+    } else {
+
+        Node* new = Node_allocate(ptr);
+
+        // [1]=[2]=[3]
+        Node* oldNext = at->next;
+
+        // [1]=[2]=[4] [3]
+        at->next = new;
+        new->prior = at;
+
+        // [1]=[2]=[4]=[3]
+        if (oldNext) {
+            new->next = oldNext;
+            oldNext->prior = new;
+        }
+
+        ++real->size;
+    }
+
+    return true;
+}
+
+bool GBList_set(GBList* list, void* ptr, size_t index) {
+
+    Node* targetNode = List_nthNode(lreal(list), index);
 
     unless(targetNode) return false;
 
@@ -99,438 +493,259 @@ bool GBLinkedList_set(GBLinkedList* list, void* ptr, size_t index) {
     return true;
 }
 
-bool GBLinkedList_splice(GBLinkedList* list, void* ptr, size_t index) {
+// ------ Neutral Modification -----------------------------------------------------------------------------------------
 
-    GBLinkedList* position = GBLinkedList_nth(list, index);
+void GBList_reverse(GBList* list) {
 
-    unless(position) return false;
+    GBListReal* real = lreal(list);
 
-    GBLinkedList* insertion = GBLinkedList_new(ptr);
+    Node* current = real->head;
+    Node* swap;
 
-    insertion->prior = position;
-    insertion->next = position->next;
-
-    insertion->next->prior = insertion;
-
-    position->next = insertion;
-
-    return true;
-}
-
-bool GBLinkedList_spliceAll(GBLinkedList* list, void* ptrs[], size_t nPtrs, size_t index) {
-
-    // Check that more than one insertion is being made
-
-    unless(nPtrs > 1) {
-        return GBLinkedList_splice(list, ptrs[0], index);
-    }
-
-    // Before bothering with expensive operations, check that it's worth it
-    GBLinkedList* insertionPoint = GBLinkedList_nth(list, index);
-
-    unless(insertionPoint) return false;
-
-    void** workingPointer = ptrs;
-
-    // Do this in reverse, as it's easier
-    GBLinkedList* tail = GBLinkedList_new(*workingPointer--);
-    GBLinkedList* head = GBLinkedList_new(NULL);
-    tail->prior = head;
-
-    // Go backwards from the second-to-last pointer and build a new linked list
-    for (size_t workingIndex = nPtrs - 2; workingIndex < nPtrs; --workingIndex) {
-
-        GBLinkedList* nextNode = GBLinkedList_new(NULL);
-        nextNode->next = head;
-        head->prior = nextNode;
-
-        head->data = *workingPointer;
-
-        head = nextNode;
-
-        --workingPointer;
-    }
-
-    // Splice the head of the new linked list in as the next node in the chain, etc...
-
-    GBLinkedList* oldNext = insertionPoint->next;
-
-    // Such that insertionPoint precedes the head of the new list
-    insertionPoint->next = head;
-    head->prior = insertionPoint;
-
-    // Such that oldNext proceeds the tail of the new list, and knows that the tail precedes it
-    tail->next = oldNext;
-    tail->next->prior = tail;
-
-    return true;
-}
-
-GBLinkedList* GBLinkedList_prepend(GBLinkedList* list, void* ptr) {
-
-    GBLinkedList* newHead = GBLinkedList_new(ptr);
-
-    newHead->next = list;
-    list->prior = newHead;
-
-    return newHead;
-}
-
-void* GBLinkedList_eject(GBLinkedList* list) {
-
-    GBLinkedList* tail = GBLinkedList_tail(list);
-
-    void* data = tail->data;
-
-    // Only do the following if the provided head is not the end of the list
-    unless(tail == list) {
-        if (tail->prior) tail->prior->next = NULL;
-        gb_free(tail);
-    }
-
-    return data;
-}
-
-F_BRIDGE // This function is just a bridge to list->data, so __make__ the compiler inline it.
-void* GBLinkedList_first(GBLinkedList* list) {
-    return list->data;
-}
-
-void* GBLinkedList_last(GBLinkedList* list) {
-    GBLinkedList* tail = GBLinkedList_tail(list);
-    unless(tail) return NULL;
-    return tail->data;
-}
-
-void* GBLinkedList_get(GBLinkedList* list, size_t index) {
-    GBLinkedList* node = GBLinkedList_nth(list, index);
-    unless(node) return NULL;
-    return node->data;
-}
-
-GBLinkedList* GBLinkedList_find(GBLinkedList* list, const void* key, GBLL_Comparator comparator) {
-
-    GBLinkedList* found = NULL;
-
-    GBLinkedList* current = list;
     do {
+        swap = current->prior;
+        current->prior = current->next;
+        current->next = swap;
+        current = current->prior;
+    } while (current);
 
-        if (comparator(key, current->data) == 0) {
-            if (found) {
-                found = GBLinkedList_prepend(found, current->data);
-            } else {
-                found = GBLinkedList_new(current->data);
-            }
+    Node* head = real->head;
+    real->head = real->tail;
+    real->tail = head;
+}
+
+// ------ Negative Modification ----------------------------------------------------------------------------------------
+
+void* GBList_pop(GBList* list) {
+
+    GBListReal* real = lreal(list);
+
+    unless(real->head && real->size > 0) return NULL;
+
+    // [<]=[_]=[_]=[>]
+    Node* oldHead = real->head;
+
+    // [_]-[<]=[_]=[>]
+    real->head = oldHead->next;
+    if (real->size == 1) real->head = real->tail;
+
+    --real->size;
+
+    // [_] [<]=[_]=[>]
+    if (real->size > 0) real->head->prior = NULL;
+
+    void* oldData = oldHead->data;
+
+    // [<]=[_]=[>]
+    Node_destroy(oldHead);
+
+    return oldData;
+}
+
+void* GBList_eject(GBList* list) {
+
+    GBListReal* real = lreal(list);
+
+    unless(real->tail && real->size > 0) return NULL;
+
+    // [<]=[_]=[_]=[>]
+
+    Node* oldTail = real->tail;
+
+    // [<]=[_]=[>]-[_]
+    real->tail = oldTail->prior;
+    if (real->size == 1) real->head = real->tail;
+
+    --real->size;
+
+    // [<]=[_]=[>] [_]
+    if (real->size > 0) real->tail->next = NULL;
+
+    void* oldData = oldTail->data;
+
+    // [<]=[_]=[>]
+    Node_destroy(oldTail);
+
+    return oldData;
+}
+
+GBListSize GBList_remove(GBList* list, void const* pVoid, GBLL_Comparator comparator) {
+
+    GBListReal* real = lreal(list);
+    GBListSize removalCount = 0;
+
+    Node* current = real->head;
+    while (current) {
+        if (comparator(pVoid, current->data) == 0) {
+            if (current->prior) current->prior->next = current->next;
+            if (current->next) current->next->prior = current->prior;
+            Node* old = current;
+            current = current->next;
+            Node_destroy(old);
+            ++removalCount;
+        } else {
+            current = current->next;
         }
-
-        current = current->next;
-    } while (current);
-
-    if (found) {
-        GBLinkedList_reverse(&found);
     }
 
-    return found;
+    real->size -= removalCount;
+
+    return removalCount;
 }
 
-void* GBLinkedList_foldRight(GBLinkedList* list, const void* x, void* (* lambda)(const void*, const void*)) {
+bool GBList_removeAt(GBList* list, GBListSize index) {
 
-    // Do the first iteration to work out a celtic knot
-    void* accum = lambda(x, list->data);
+    GBListReal* real = lreal(list);
+    Node* at = List_nthNode(real, index);
 
-    GBLinkedList* current = list->next;
-    do {
+    unless(at) return false;
 
-        void* lastAccum = accum;
-        accum = lambda(accum, current->data);
-        gb_free(lastAccum);
+    at->prior->next = at->next;
+    at->next->prior = at->prior;
 
-        current = current->next;
-    } while (current);
+    Node_destroy(at);
+
+    --real->size;
+
+    return true;
+}
+
+$WrapperFunction
+void GBList_clear(GBList* list) {
+    Node_destroyChain(lreal(list)->head);
+    lreal(list)->head = NULL;
+    lreal(list)->tail = NULL;
+    lreal(list)->size = 0;
+}
+
+// ------ List Computations --------------------------------------------------------------------------------------------
+
+void* GBList_foldRight(GBList* list, const void* x, void* (* lambda)(const void*, const void*)) {
+
+    GBIterator* iterator = GBList_iterator(list);
+
+    void* accum = NULL;
+    if (GBIterator_hasNext(iterator)) {
+        accum = lambda(x, GBIterator_next(iterator));
+        while (GBIterator_hasNext(iterator)) {
+
+            void* lastAccum = accum;
+
+            accum = lambda(accum, GBIterator_next(iterator));
+
+            gb_free(lastAccum);
+
+        }
+    }
+
+    GBIterator_destroy(iterator);
 
     return accum;
 }
 
-GBLinkedList* GBLinkedList_map(GBLinkedList* list, void* (* lambda)(const void*)) {
-    return GBLinkedList_mapWith(list, x, lambda(x));
+GBList* GBList_map(GBList* list, void* (* lambda)(const void*)) {
+    return GBList_mapWith(list, x, lambda(x));
 }
 
-// Sort Logic & Helpers -------------------------------------------------------------------------
+// ------ List Sorting -------------------------------------------------------------------------------------------------
 
+// -------- List Sort Helpers ------------------------------------------------------------------------------------------
 
-#define printList(list) {\
-if(list){\
-    d_printf("{ ");\
-    GBLinkedList_with(list, node, {\
-        if(node->data) d_printf("%i", *((int*)node->data));\
-        else d_printf("(nil)");\
-        if(node->next) d_printf(", ");\
-    });\
-    d_printf(" }");\
-} else {\
-    d_printf("nil");\
-}\
-}
+$Internal $NotNull(1, 3)
+void List_sortImpl(GBList* list, GBListSize length, GBLL_Comparator comparator) {
 
-F_INTERNAL ALL_ARGS_EXIST
-GBLinkedList* sort_Tail(GBLinkedList* head) {
-    if(head->next) {
-        return sort_Tail(head->next);
-    } else {
-        return head;
-    }
-}
-
-F_INTERNAL ALL_ARGS_EXIST
-void sort_AppendAll(GBLinkedList* appendTo, GBLinkedList* appendFrom) {
-
-    d_printf("- %s(", __FUNCTION__);
-    printList(appendTo);
-    d_printf(", ");
-    printList(appendFrom);
-    d_printf(") = ");
-
-    GBLinkedList* current = appendFrom;
-
-    GBLinkedList* tail = sort_Tail(appendTo);
-    tail->next = GBLinkedList_new(NULL);
-    tail = tail->next;
-
-    GBLinkedList* last = NULL;
-
-    do {
-        tail->data = current->data;
-
-        if (last) tail->prior = last;
-
-        current = current->next;
-
-        if (current) {
-            last = tail;
-            tail = GBLinkedList_new(NULL);
-            last->next = tail;
-        }
-    } while (current);
-
-    printList(appendTo);
-    d_printf("\n");
-}
-
-F_INTERNAL ALL_ARGS_EXIST
-GBLinkedList* sort_MergeLists(GBLinkedList* a, GBLinkedList* b, GBLL_Comparator comparator) {
-
-    d_printf("- %s(", __FUNCTION__);
-    printList(a);
-    d_printf(", ");
-    printList(b);
-    d_printf(")\n");
-
-    GBLinkedList* result = GBLinkedList_new(NULL);
-
-    GBLinkedList* tail = result;
-    GBLinkedList* last = NULL;
-
-    d_printf("- smart merge comparator\n");
-
-    do {
-
-        int diff = comparator(a->data, b->data);
-
-        d_printf("-- dif(%i, %i) = %i\n",
-                    *((int*) a->data), *((int*) b->data),
-                    diff);
-
-        if (diff <= 0) {
-            d_printf("--- result << %i {left} \n", *((int*) a->data));
-            tail->data = a->data;
-            a = a->next;
-        } else {
-            d_printf("--- result << %i {right} \n", *((int*) b->data));
-            tail->data = b->data;
-            b = b->next;
-        }
-
-        // Only prepare for the next append operation if there is more data
-        if (a && b) {
-
-            // assign last processed as tail
-            last = tail;
-
-            // create new tail
-            tail = GBLinkedList_new(NULL);
-
-            // set the previous tail as being proceeded by the new tail
-            last->next = tail;
-
-            // Set the previous element of the new tail as being the previous tail
-            tail->prior = last;
-        }
-    } while (a && b);
-
-    // If one of the lists was longer than the other, append the remainder to the result list
-    if (a) {
-        d_printf("- merge all rest a\n");
-        sort_AppendAll(result, a);
+    unless(length > 1) {
+        d_printf("list fully reduced\n");
+        return;
     }
 
-    if (b) {
-        d_printf("- merge all rest b\n");
-        sort_AppendAll(result, b);
-    }
+    GBList* left = GBList_new();
+    GBList* right = GBList_new();
 
-    d_printf("- result = ");
-    GBLinkedList_with(result, node, {
-        d_printf("%i, ", *((int*) node->data));
-    });
-    d_printf("\n");
+    d_printf("list->size = %lu\n", length);
 
-    return result;
-}
+    trace_disable();
 
-GBLinkedList* GBLinkedList_sort(GBLinkedList* list, GBLL_Comparator comparator) {
-
-    d_printf("\n\n\n%s\n", __FUNCTION__);
-
-    size_t length = GBLinkedList_size(list);
-
-    d_printf("size(*list) = %lu\n", length);
-
-    unless(length > 1) return list;
-
-    GBLinkedList* left = GBLinkedList_new(NULL);
-    GBLinkedList* right = GBLinkedList_new(NULL);
-
-    GBLinkedList* result;
-
-    size_t pivot = length / 2;
-    GBLinkedList* current = list;
-
-    d_printf("pivot = %lu\n", pivot);
-
-    // Populate left division
     {
-        GBLinkedList* tail = left;
-        GBLinkedList* last = NULL;
-        size_t idx = 0;
+        d_printf("append to left\n");
+        GBListSize pivotIndex = length / 2;
+        GBIterator* iterator = GBList_iterator(list);
 
-        do {
+        for (GBListSize idx = 0; idx < pivotIndex; ++idx) GBList_append(left, GBIterator_next(iterator));
 
-            // Set the value of the current node in the builder chain to that
-            // of the current list node
-            tail->data = current->data;
+        d_printf("append to right\n");
+        trace_enable();
+        while (GBIterator_hasNext(iterator)) GBList_append(right, GBIterator_next(iterator));
+        trace_disable();
 
-            d_printf("-- {left} result << %i \n", ({
-                int res = -1;
-                if (current->data) {
-                    res = *((int*) current->data);
-                }
-                assert(res >= 0);
-                res;
-            }));
-
-            // If there was a builder node before this, set this nodes prior reference to that
-            if (last) tail->prior = last;
-
-            // Update the list node to the next list node
-            current = current->next;
-
-            // Avoid performing these operations if the final element in left is being appended
-            if (pivot > 1 && (idx < (pivot - 2))) {
-
-                d_printf("--- append tail \n");
-
-                // Create the next node
-                tail->next = GBLinkedList_new(NULL);
-
-                // Set this node as the last processed node
-                last = tail;
-
-                // Set the current tail node as the next node to exist
-                tail = last->next;
-
-            }
-
-            ++idx;
-
-        } while (idx < (pivot - 1));
-
-        d_printf("- {left} = ");
-        printList(left);
-        d_printf("\n");
+        GBIterator_destroy(iterator);
     }
 
-    // Populate right division
-    {
-        GBLinkedList* tail = right;
-        GBLinkedList* last = NULL;
-        do {
-            tail->data = current->data;
+    d_printf("pivot is %lu , left size is %lu , right size is %lu\n", length / 2, left->size, right->size);
+    trace_enable();
+    d_printf("sort left\n");
+    List_sortImpl(left, left->size, comparator);
+    d_printf("sort right\n");
+    List_sortImpl(right, right->size, comparator);
 
-            d_printf("-- {right} result << %i \n", ({
-                int res = -1;
-                if (current->data) {
-                    res = *((int*) current->data);
-                }
-                assert(res >= 0);
-                res;
-            }));
+    GBList_clear(list);
 
-            if (last) tail->prior = last;
+    if (comparator(GBList_last(left), GBList_first(right)) <= 0) {
 
-            current = current->next;
+        d_printf("reorder mode (right >> left)\n");
+        trace_disable();
 
-            if (current) {
-                tail->next = GBLinkedList_new(NULL);
+        GBIterator* iLeft = GBList_iterator(left);
+        GBIterator* iRight = GBList_iterator(right);
 
-                last = tail;
+        while (GBIterator_hasNext(iLeft)) GBList_append(list, GBIterator_next(iLeft));
+        while (GBIterator_hasNext(iRight)) GBList_append(list, GBIterator_next(iRight));
 
-                tail = last->next;
-            }
+        GBIterator_destroy(iLeft);
+        GBIterator_destroy(iRight);
 
-        } while (current);
-
-        d_printf("- {right} = ");
-        printList(right);
-        d_printf("\n");
-    }
-
-    size_t leftSize = GBLinkedList_size(left);
-    size_t rightSize = GBLinkedList_size(right);
-
-    // Recursive sort down to minimum
-    left = GBLinkedList_sort(left, comparator);
-    d_printf("- {left[%lu]} child sort returned ", leftSize);
-    printList(left);
-    d_printf("\n");
-    right = GBLinkedList_sort(right, comparator);
-    d_printf("- {right[%lu]} child sort returned ", rightSize);
-    printList(right);
-    d_printf("\n");
-
-    bool invertMerge = (comparator(left->data, right->data) <= 0);
-
-    // Determine merge order
-    if (invertMerge) {
-        result = sort_MergeLists(right, left, comparator);
     } else {
-        result = sort_MergeLists(left, right, comparator);
-    }
 
-    // Free left and right temp lists
-    GBLinkedList_free(left);
-    GBLinkedList_free(right);
+        d_printf("merge mode\n");
 
-    // Assign old list head pointer to new list head pointer
-    return result;
-}
-
-bool GBLinkedList_contains(GBLinkedList* list, const void* key, GBLL_Comparator comparator) {
-
-    for (GBLinkedList* current = list; current; current = current->next) {
-        if (comparator(key, current->data) == 0) {
-            return true;
+        while ((left->size > 0) && (right->size > 0)) {
+            if (comparator(GBList_first(left), GBList_first(right)) <= 0) {
+                GBList_append(list, GBList_pop(left));
+            } else {
+                GBList_append(list, GBList_pop(right));
+            }
         }
+
+        d_printf("merge complete\n");
+
+        if(left->size > 0) {
+            d_printf("append left remainder\n");
+            GBIterator* iterator = GBList_iterator(left);
+            while(GBIterator_hasNext(iterator)) GBList_append(list, GBIterator_next(iterator));
+            GBIterator_destroy(iterator);
+        }
+
+        if(right->size > 0) {
+            d_printf("append right remainder\n");
+            GBIterator* iterator =GBList_iterator(right);
+            while(GBIterator_hasNext(iterator)) GBList_append(list, GBIterator_next(iterator));
+            GBIterator_destroy(iterator);
+        }
+
     }
 
-    return false;
+    trace_enable();
+
+    GBList_free(left);
+    GBList_free(right);
 }
+
+// -------- List Sort API Implementation -------------------------------------------------------------------------------
+
+$Weak
+void GBList_sort(GBList* list, GBLL_Comparator comparator) {
+    List_sortImpl(list, list->size, comparator);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
