@@ -9,7 +9,7 @@ add_definitions(
         -D_GB_DEBUG_URGENT
         )
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=c99 -lm")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -g -finstrument-functions -ldl -std=c99 -lm")
 
 set(SOURCE_FILES
     src/util.h
