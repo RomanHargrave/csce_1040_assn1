@@ -25,7 +25,7 @@
 
 // Utility Functions ---------------------------------------------------------------------------------------------------
 
-F_HIDDEN
+$Hidden
 int compare_byte(const void* a, const void* b) {
     if(!a | !b) {
         return (!a && !b) ? 0 : -1;
@@ -136,7 +136,7 @@ typedef struct S_IGradeBook {
 /*
  * Serialize book in to receiver, starting at offset, and return the next NULL pointer index
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size IGradeBook_serialize(IGradeBook* book, byte* receiver, size offset) {
 
     size idx            = offset;
@@ -166,7 +166,7 @@ size IGradeBook_serialize(IGradeBook* book, byte* receiver, size offset) {
 /*
  * Deserialize a GradeBook, and return the position of the next unrelated byte
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size IGradeBook_deserialize(byte* data, size offset, IGradeBook* destination) {
 
     size idx        = offset;
@@ -257,7 +257,7 @@ typedef struct S_ICourse {
 /*
  * GNU C Comparator for ICourse that compares by courseId
  */
-F_HIDDEN
+$Hidden
 int ICourse_compareByID(const void* a, const void* b) {
     if( !a | !b /* NULL Pointer check */) {
         return (!a && !b) ? 0 : -1 /* Always send NULL to the end */ ;
@@ -271,7 +271,7 @@ int ICourse_compareByID(const void* a, const void* b) {
  * courseId and courseName will be copied to their respective fields in the ICourse, but
  * course->studentIds will be converted from pointers to student ID numbers and stored as such
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 ICourse ICourse_fromCourse(Course* course) {
 
     ICourse iCourse = {
@@ -291,7 +291,7 @@ ICourse ICourse_fromCourse(Course* course) {
 /*
  * Create a Course object from a primitive. Does not add students.
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 Course ICourse_toCourse(ICourse* iCourse) {
 
     Course course = {
@@ -306,7 +306,7 @@ Course ICourse_toCourse(ICourse* iCourse) {
 /*
  * Serialize course in to the receiver, starting at offset, and return the next NULL pointer index
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size ICourse_serialize(ICourse* course, byte* receiver, size offset) {
 
     size idx        = offset;
@@ -337,7 +337,7 @@ size ICourse_serialize(ICourse* course, byte* receiver, size offset) {
     return idx;
 }
 
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size ICourse_deserialize(byte* data, size offset, ICourse* destination) {
 
     size idx        = offset;
@@ -465,7 +465,7 @@ typedef struct S_IStudent {
 /*
  * GNU C Comparator for IStudent by studentId
  */
-F_HIDDEN
+$Hidden
 int IStudent_compareByID(const void* a, const void* b) {
     return ((IStudent*)a)->studentId - ((IStudent*)b)->studentId;
 }
@@ -474,7 +474,7 @@ int IStudent_compareByID(const void* a, const void* b) {
  * Initializes an IStudent (primitive student serialization intermediate model) from a student
  * studentId and studentName will be copied, along with the grade array for each non-null pointer
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 IStudent IStudent_fromStudent(Student* student) {
 
     IStudent iStudent = {
@@ -497,7 +497,7 @@ IStudent IStudent_fromStudent(Student* student) {
 /*
  * Initialize a Student from an intermediary student. Does not associate courses(!!).
  */
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 Student IStudent_toStudent(IStudent* iStudent) {
 
     size nCourses  = iStudent->coursesCount;
@@ -519,7 +519,7 @@ Student IStudent_toStudent(IStudent* iStudent) {
     return student;
 }
 
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size IStudent_serialize(IStudent* student, byte* receiver, size offset) {
 
     size idx            = offset;
@@ -562,7 +562,7 @@ size IStudent_serialize(IStudent* student, byte* receiver, size offset) {
     return idx;
 }
 
-F_INTERNAL F_CREATE ALL_ARGS_EXIST
+$Internal $Factory $NotNull()
 size IStudent_deserialize(byte* data, size offset, IStudent* destination) {
 
     size idx        = offset;
@@ -906,7 +906,7 @@ SerializationStatus GradeBook_deserialize(byte* serialData, GradeBook* destinati
 /*
  * For a description of the sizing algorithm for Student, see IStudent_serialize
  */
-F_CONST
+$ConstFunction
 size sizeOfStudent(Student* student) {
 
     size nCourses      = Student_coursesCount(student);
@@ -923,7 +923,7 @@ size sizeOfStudent(Student* student) {
 /*
  * For a description of the sizing algorithm for Course, see ICourse_serialize
  */
-F_CONST
+$ConstFunction
 size sizeOfCourse(Course* course) {
 
     size nStudents  = Course_studentsCount(course);
@@ -945,7 +945,7 @@ size sizeOfCourse(Course* course) {
  *
  * In addition, the size of the magic number, an identifier preceding all serialized data, is added to this.
  */
-F_CONST
+$ConstFunction
 size sizeOfGradeBook(GradeBook* book) {
     size nCourses           = book->coursesCount;
     size nStudents          = book->studentsCount;
@@ -963,7 +963,7 @@ size sizeOfGradeBook(GradeBook* book) {
     return (1 + nCourses) + (1 + nStudents) + accumCourseSize + accumStudentSize + NMEMBERS(GRADEBOOK_MAGIC, byte);
 }
 
-F_CONST
+$ConstFunction
 size sizeOfGradeBookOnly(GradeBook* book) {
     size nCourses  = book->coursesCount;
     size nStudents = book->studentsCount;
